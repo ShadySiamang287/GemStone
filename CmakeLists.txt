@@ -18,6 +18,7 @@ if(GEMSTONE_BUILD_DOCUMENTATION)
     find_package(Doxygen REQUIRED)
 
     add_custom_target(documentation
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/docs
         COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/docs/Doxyfile
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "Generating GemStone API documentation"
