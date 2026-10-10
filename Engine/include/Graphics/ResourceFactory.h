@@ -31,6 +31,11 @@ namespace GEM{
         /// @param verticies A span of verticies so any structure can be used
         /// @return The newly created vertex buffer
         static std::unique_ptr<VertexBuffer> CreateVertexBuffer(std::span<Vertex> verticies);
+    
+        /// @brief Creates an index buffer
+        /// @param indicies a span uint32_t indicies so any structure can be used
+        /// @return the newly created index buffer
+        static std::unique_ptr<IndexBuffer> CreateIndexBuffer(std::span<uint32_t> indicies);
     private:
         static GraphicsContext* sContextPtr;
     };

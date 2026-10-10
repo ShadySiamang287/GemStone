@@ -54,7 +54,7 @@ std::unique_ptr<GraphicsPipeline> ResourceFactory::CreateGraphicsPipeline(const 
 	};
 
 	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-	state.RasterizerState.FrontCounterClockwise = TRUE;
+	state.RasterizerState.FrontCounterClockwise = false;
 
 	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
@@ -223,7 +223,100 @@ std::unique_ptr<VertexBuffer> ResourceFactory::CreateVertexBuffer(std::span<Vert
 	buffer->mView.SizeInBytes = bufferSize;
 	buffer->mView.StrideInBytes = sizeof(Vertex);
 
+	buffer->mAllocation->SetName(L"Vertex Buffer");
+
 	return buffer;
 }
+
+std::unique_ptr<IndexBuffer> ResourceFactory::CreateIndexBuffer(std::span<uint32_t> indicies) {
+	CHECK_CONTEXT(nullptr)
+
+	auto buffer = std::make_unique<IndexBuffer>();
+
+	size_t bufferSize = indicies.size_bytes();
+	D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+
+	D3D12MA::ALLOCATION_DESC defaultDesc{};
+	defaultDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	THROW_IF_FAILED(
+		sContextPtr->mAllocator->CreateResource(
+			&defaultDesc,
+			&resourceDesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			buffer->mAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		)
+	);
+
+	Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation;
+    D3D12MA::ALLOCATION_DESC uploadDesc{};
+    uploadDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+    THROW_IF_FAILED(
+        sContextPtr->mAllocator->CreateResource(
+            &uploadDesc,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            uploadAllocation.GetAddressOf(),
+            IID_NULL,
+            nullptr
+        )
+    );
+
+    ID3D12Resource* destination = buffer->GetResource();
+    ID3D12Resource* upload = uploadAllocation->GetResource();
+
+	//Copy the data to the transfer buffer
+    void* mappedData = nullptr;
+    D3D12_RANGE readRange{ 0, 0 };
+
+    THROW_IF_FAILED(upload->Map(0,&readRange, &mappedData));
+
+    std::memcpy(mappedData, indicies.data(),static_cast<size_t>(bufferSize));
+
+    upload->Unmap(0, nullptr);
+
+	// copy the transfer buffer to the actual buffer
+	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList* commandList){
+        auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
+			destination,
+			D3D12_RESOURCE_STATE_COMMON,
+			D3D12_RESOURCE_STATE_COPY_DEST
+		);
+
+		commandList->ResourceBarrier(1, &toCopyDest);
+		
+		commandList->CopyBufferRegion(
+            destination,
+            0,
+            upload,
+            0,
+            bufferSize
+        );
+
+        auto barrier =
+            CD3DX12_RESOURCE_BARRIER::Transition(
+                destination,
+                D3D12_RESOURCE_STATE_COPY_DEST,
+                D3D12_RESOURCE_STATE_INDEX_BUFFER
+            );
+
+        commandList->ResourceBarrier(1, &barrier);
+	});
+	uploadAllocation.Reset();
+
+	buffer->mView.BufferLocation = destination->GetGPUVirtualAddress();
+	buffer->mView.SizeInBytes = bufferSize;
+	buffer->mView.Format = DXGI_FORMAT_R32_UINT;
+
+	buffer->mAllocation->SetName(L"Index Buffer");
+
+	return buffer;
+}
+
 
 GraphicsContext* ResourceFactory::sContextPtr = nullptr;

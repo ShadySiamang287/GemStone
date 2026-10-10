@@ -31,6 +31,15 @@ namespace GEM {
         /// @param firstInstance where the first instance is
         static void Draw(const int& vertexCount, const int& instanceCount, const int& firstVertex, const int& firstInstance);
 
+        /// @brief Draws a mesh with indicies
+        /// @param indexCount the number of indicies
+        /// @param instanceCount the number of instances to draw
+        /// @param firstIndex where the first index is
+        /// @param firstVertex where the first vertex is
+        /// @param firstInstance where the first instance is
+        static void DrawIndexed(const int& indexCount, const int& instanceCount, const int& firstIndex, const int& firstVertex, const int& firstInstance);
+
+
         /// @brief Binds the viewport
         /// @param x1 intial X
         /// @param y1 inital Y
@@ -50,6 +59,10 @@ namespace GEM {
         /// @brief Binds the vertex buffer to be drawn from
         /// @param buffer The buffer to bind
         static void BindVertexBuffer(const VertexBuffer& buffer);
+        
+        /// @brief Binds the index buffer to be drawn from
+        /// @param buffer The buffer to bind
+        static void BindIndexBuffer(const IndexBuffer& buffer);
 
         /// @brief This binds pipeline to the current render pass
         /// @param pipeline The pipeline to bind

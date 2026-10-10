@@ -131,6 +131,13 @@ void GraphicsCommands::Draw(const int& vertexCount, const int& instanceCount, co
     commandList->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
+void GraphicsCommands::DrawIndexed(const int& indexCount, const int& instanceCount, const int& firstIndex, const int& firstVertex, const int& firstInstance) {
+    CHECK_CONTEXT
+
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, firstVertex, firstInstance);
+}
+
 
 void GraphicsCommands::BindViewport(const float& x1, const float& y1, const float& x2, const float& y2, const float& minDepth, const float& maxDepth) {
     CHECK_CONTEXT
@@ -169,6 +176,13 @@ void GraphicsCommands::BindVertexBuffer(const VertexBuffer& buffer){
 
     auto* commandList = sContextPtr->mCommandList.Get();
     commandList->IASetVertexBuffers(0, 1, &buffer.GetView());
+}
+
+void GraphicsCommands::BindIndexBuffer(const IndexBuffer& buffer) {
+    CHECK_CONTEXT
+
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->IASetIndexBuffer(&buffer.GetView());
 }
 
 GraphicsContext* GraphicsCommands::sContextPtr = nullptr;

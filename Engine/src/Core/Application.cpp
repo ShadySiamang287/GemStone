@@ -29,13 +29,19 @@ Application::Application(HINSTANCE instance) {
     desc.enableDepth = false;
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
 
-    std::array<Vertex, 3> vertices = {
-        Vertex{{0.0f, 0.5f, 0.f}, {1.f, 0.f, 0.f, 1.f}},
-        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f, 1.f}},
-        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 1.f, 0.f, 1.f}},
+    std::array<Vertex, 4> vertices = {
+        Vertex{{-0.5f, 0.5f, 0.f}, {1.f, 0.f, 0.f, 1.f}},
+        Vertex{{0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f, 1.f}},
+        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 1.f, 0.f, 1.f}},
+        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 1.f, 1.f, 1.f}},
     };
-
     mVertexBuffer = ResourceFactory::CreateVertexBuffer(vertices);
+    
+    std::array<uint32_t, 6> indices = {
+        0, 1, 2,
+        1, 3, 2
+    };
+    mIndexBuffer = ResourceFactory::CreateIndexBuffer(indices);
 }
 
 void Application::Run() {
@@ -45,7 +51,8 @@ void Application::Run() {
         GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
         GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
         GraphicsCommands::BindVertexBuffer(*mVertexBuffer.get());
-        GraphicsCommands::Draw(3, 1, 0, 0);
+        GraphicsCommands::BindIndexBuffer(*mIndexBuffer.get());
+        GraphicsCommands::DrawIndexed(6, 1, 0, 0, 0);
         GraphicsCommands::EndFrame();
     }
 }

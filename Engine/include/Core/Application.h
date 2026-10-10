@@ -27,6 +27,7 @@ namespace GEM{
         std::unique_ptr<GraphicsPipeline> mPipeline;
         std::shared_ptr<RootSignature> mRootSig;
         std::unique_ptr<VertexBuffer> mVertexBuffer;
+        std::unique_ptr<IndexBuffer> mIndexBuffer;
     };
 
     /// @brief This function is used to the instance of the application the program uses
