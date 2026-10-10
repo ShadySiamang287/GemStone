@@ -14,6 +14,9 @@ This is a DirectX 12 test engine im developing that uses slang shaders. It compi
 CMake automatically gathers and installs all dependencies **except slang**, so just run build on either Debug or Build after installing slangc
 
 ## Documentation
+[Read the GemStone API documentation](https://shadysiamang287.github.io/GemStone/)
+
+### Offline generation of docs
 
 Install [Doxygen](https://www.doxygen.nl/) and enable the optional CMake target:
 
@@ -22,6 +25,5 @@ cmake -S . -B build -DGEMSTONE_BUILD_DOCUMENTATION=ON
 cmake --build build --target documentation
 ```
 
-The generated HTML documentation is written to `build/docs/html`. The GitHub Actions workflow generates the same documentation and publishes it to [GitHub Pages](https://shadysiamang287.github.io/GemStone/) after a push to `main`.
+The generated HTML documentation is written to `build/docs/html`.
 
-The first time, set **Settings → Pages → Source** to **GitHub Actions** in the repository. Pull requests build the documentation but do not deploy it.
