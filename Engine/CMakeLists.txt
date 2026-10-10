@@ -16,8 +16,10 @@ target_precompile_headers(Engine PRIVATE ${Engine_SOURCE_DIR}/include/pch.h)
 target_sources(Engine PRIVATE
     src/Core/Application.cpp
     src/Core/Window.cpp
-    src/GraphicsContext/GraphicsContext.cpp
-    src/GraphicsContext/GraphicsCommands.cpp
+    src/Graphics/GraphicsContext.cpp
+    src/Graphics/GraphicsCommands.cpp
+    src/Graphics/GraphicsPipeline.cpp
+    src/Graphics/ResourceFactory.cpp
 )
 
 target_include_directories(Engine

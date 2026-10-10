@@ -1,9 +1,13 @@
 #pragma once
 
 namespace GEM{
+    /// @brief This class encapsulates the DirectX12 objects 
     class GraphicsContext{
     public:
+        /// @brief Initialises the objects
+        /// @param window The window being renderered too 
         GraphicsContext(HWND window);
+        /// @brief This is needed since the fence needs to empty before the objects are destroyed.
         ~GraphicsContext();
 
     private:
@@ -39,5 +43,6 @@ namespace GEM{
         UINT HEIGHT = 720;
 
         friend class GraphicsCommands;
+        friend class ResourceFactory;
    };
 }

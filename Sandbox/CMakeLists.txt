@@ -15,3 +15,26 @@ target_link_libraries(Sandbox
 PRIVATE
     Engine
 )
+
+add_slang_shader(
+    TARGET GemStoneShaders
+    NAME TriangleVS
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Triangle.slang"
+    ENTRY vertMain
+    PROFILE vs_6_6
+    INCLUDE_DIRS
+        "${Sandbox_SOURCE_DIR}/Shaders"
+    ALL
+)
+
+add_slang_shader(
+    TARGET GemStoneShaders
+    NAME TrianglePS
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Triangle.slang"
+    ENTRY fragMain
+    PROFILE ps_6_6
+    INCLUDE_DIRS
+        "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
+add_dependencies(Sandbox GemStoneShaders)

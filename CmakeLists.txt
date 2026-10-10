@@ -10,6 +10,7 @@ option(GEMSTONE_BUILD_DOCUMENTATION
 )
 
 include(cmake/Dependencies.cmake)
+include(cmake/Slang.cmake)
 
 add_subdirectory(Engine)
 add_subdirectory(Sandbox)
