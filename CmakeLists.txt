@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.28)
+
+project(GemStone VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+include(cmake/Dependencies.cmake)
+
+add_subdirectory(Engine)
+add_subdirectory(Sandbox)
+
+add_custom_command(TARGET Engine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:Engine>
+        $<TARGET_FILE_DIR:Sandbox>
+)
