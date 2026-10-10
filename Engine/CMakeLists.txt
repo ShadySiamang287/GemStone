@@ -38,3 +38,9 @@ target_link_libraries(Engine PRIVATE
     DirectX-Headers
     D3D12MemoryAllocator
 )
+
+add_custom_command(TARGET Engine POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:Engine>
+        $<TARGET_FILE_DIR:Sandbox>
+)

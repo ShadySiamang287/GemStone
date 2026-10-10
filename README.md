@@ -12,3 +12,14 @@ This is a DirectX 12 test engine im developing that uses slang shaders. It compi
 - [Slang](https://github.com/shader-slang/slang)
 ### Installation
 CMake automatically gathers and installs all dependencies **except slang**, so just run build on either Debug or Build after installing slangc
+
+## Documentation
+
+Install [Doxygen](https://www.doxygen.nl/) and enable the optional CMake target:
+
+```powershell
+cmake -S . -B build -DGEMSTONE_BUILD_DOCUMENTATION=ON
+cmake --build build --target documentation
+```
+
+The generated HTML documentation is written to `build/docs/html`. The GitHub Actions workflow generates the same documentation and uploads it as a workflow artifact.
