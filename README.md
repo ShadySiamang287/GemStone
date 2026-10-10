@@ -22,4 +22,6 @@ cmake -S . -B build -DGEMSTONE_BUILD_DOCUMENTATION=ON
 cmake --build build --target documentation
 ```
 
-The generated HTML documentation is written to `build/docs/html`. The GitHub Actions workflow generates the same documentation and uploads it as a workflow artifact.
+The generated HTML documentation is written to `build/docs/html`. The GitHub Actions workflow generates the same documentation and publishes it to [GitHub Pages](https://shadysiamang287.github.io/GemStone/) after a push to `main`.
+
+The first time, set **Settings → Pages → Source** to **GitHub Actions** in the repository. Pull requests build the documentation but do not deploy it.

@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
   build:
     name: Build Doxygen documentation
@@ -27,9 +31,24 @@ jobs:
           mkdir -p build/docs
           doxygen docs/Doxyfile
 
-      - name: Upload documentation
-        uses: actions/upload-artifact@v4
+      - name: Upload documentation for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: gemstone-documentation
           path: build/docs/html
-          if-no-files-found: error
+
+  deploy:
+    name: Deploy documentation to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
