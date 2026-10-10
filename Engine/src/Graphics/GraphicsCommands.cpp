@@ -4,6 +4,13 @@
 
 #include <pix3.h>
 
+#define CHECK_CONTEXT     \
+    if (!sContextPtr) {  \
+        std::cout << "Graphics Context not Registered to command list" << std::endl;\
+        return;\
+    }\
+
+
 using namespace GEM;
 
 void GraphicsCommands::RegisterContext(GraphicsContext* context) {
@@ -11,11 +18,40 @@ void GraphicsCommands::RegisterContext(GraphicsContext* context) {
     sContextPtr = context;
 }
 
-void GraphicsCommands::BeginFrame() {
-    if (!sContextPtr) {
-        std::cout << "Graphics Context not Registered to command list" << std::endl;
-        return;
+void GraphicsCommands::ExecuteImmediate(const std::function<void(ID3D12GraphicsCommandList*)>& record){
+    CHECK_CONTEXT
+
+    auto* context = sContextPtr;
+
+    THROW_IF_FAILED(context->mCommandAllocator->Reset());
+
+    THROW_IF_FAILED(context->mCommandList->Reset(context->mCommandAllocator.Get(), nullptr));
+
+    record(context->mCommandList.Get());
+
+    THROW_IF_FAILED(context->mCommandList->Close());
+
+    ID3D12CommandList* lists[] =
+    {
+        context->mCommandList.Get()
+    };
+
+    context->mCommandQueue->ExecuteCommandLists(1, lists);
+
+    ++context->mFenceValue;
+
+    THROW_IF_FAILED(context->mCommandQueue->Signal(context->mFence.Get(), context->mFenceValue));
+
+    if (context->mFence->GetCompletedValue() < context->mFenceValue){
+        THROW_IF_FAILED(context->mFence->SetEventOnCompletion(context->mFenceValue,context->mFenceEvent));
+
+        WaitForSingleObject(context->mFenceEvent, INFINITE);
     }
+}
+
+
+void GraphicsCommands::BeginFrame() {
+    CHECK_CONTEXT
 
     auto* commandList = sContextPtr->mCommandList.Get();
 
@@ -51,10 +87,7 @@ void GraphicsCommands::BeginFrame() {
 }
 
 void GraphicsCommands::EndFrame() {
-    if (!sContextPtr) {
-        std::cout << "Graphics Context not Registered to command list" << std::endl;
-        return;
-    }
+    CHECK_CONTEXT
 
     D3D12_RESOURCE_BARRIER barrier{};
     barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
@@ -92,20 +125,16 @@ void GraphicsCommands::EndFrame() {
 }
 
 void GraphicsCommands::Draw(const int& vertexCount, const int& instanceCount, const int& firstVertex, const int& firstInstance) {
-    if (!sContextPtr) {
-        std::cout << "Graphics Context not Registered to command list" << std::endl;
-        return;
-    }
+    CHECK_CONTEXT
+
     auto* commandList = sContextPtr->mCommandList.Get();
     commandList->DrawInstanced(vertexCount, instanceCount, firstVertex, firstInstance);
 }
 
 
 void GraphicsCommands::BindViewport(const float& x1, const float& y1, const float& x2, const float& y2, const float& minDepth, const float& maxDepth) {
-    if (!sContextPtr) {
-        std::cout << "Graphics Context not Registered to command list" << std::endl;
-        return;
-    }
+    CHECK_CONTEXT
+
     auto* commandList = sContextPtr->mCommandList.Get();
     D3D12_VIEWPORT viewport = {
         x1, y1,
@@ -116,10 +145,8 @@ void GraphicsCommands::BindViewport(const float& x1, const float& y1, const floa
 }
 
 void GraphicsCommands::BindScissorRect(const int& x1, const int& y1, const int& x2, const int& y2) {
-    if (!sContextPtr) {
-        std::cout << "Graphics Context not Registered to command list" << std::endl;
-        return;
-    }
+    CHECK_CONTEXT
+
     auto* commandList = sContextPtr->mCommandList.Get();
     D3D12_RECT scissor = {
         x1, y1,
@@ -129,15 +156,19 @@ void GraphicsCommands::BindScissorRect(const int& x1, const int& y1, const int& 
 }
 
 void GraphicsCommands::BindGraphicsPipeline(GraphicsPipeline& pipeline) {
-    if (!sContextPtr) {
-        std::cout << "Graphics Context not Registered to command list" << std::endl;
-        return;
-    }
+    CHECK_CONTEXT
 
     auto* commandList = sContextPtr->mCommandList.Get();
     commandList->SetGraphicsRootSignature(pipeline.mRootSignature.Get());
     commandList->SetPipelineState(pipeline.mPipelineState.Get());
     commandList->IASetPrimitiveTopology(pipeline.mTopology);
+}
+
+void GraphicsCommands::BindVertexBuffer(const VertexBuffer& buffer){
+    CHECK_CONTEXT
+
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->IASetVertexBuffers(0, 1, &buffer.GetView());
 }
 
 GraphicsContext* GraphicsCommands::sContextPtr = nullptr;

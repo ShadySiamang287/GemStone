@@ -8,6 +8,7 @@ GraphicsContext::GraphicsContext(HWND window) {
 	CreateFactory();
 	CreateAdaptor();
 	CreateDevice();
+	CreateAllocator();
 	CreateCommandObjects();
 	CreateFence();
 	CreateSwapchain(window, WIDTH, HEIGHT);
@@ -17,6 +18,11 @@ GraphicsContext::~GraphicsContext() {
 	if (mFenceEvent){
 		CloseHandle(mFenceEvent);
 		mFenceEvent = nullptr;
+	}
+
+	if (mAllocator) {
+		mAllocator->Release();
+		mAllocator = nullptr;
 	}
 }
 
@@ -74,6 +80,17 @@ void GraphicsContext::CreateAdaptor() {
 		WKPDID_D3DDebugObjectName,
 		sizeof(L"Graphics Adapter"),
 		L"Graphics Adapter"));
+}
+
+void GraphicsContext::CreateAllocator() {
+	D3D12MA::ALLOCATOR_DESC desc{};
+    desc.pDevice = mDevice.Get();
+    desc.pAdapter = mAdapter.Get();
+	desc.Flags = D3D12MA_RECOMMENDED_ALLOCATOR_FLAGS;
+
+    THROW_IF_FAILED(
+        D3D12MA::CreateAllocator(&desc, &mAllocator)
+    );
 }
 
 void GraphicsContext::CreateDevice(){

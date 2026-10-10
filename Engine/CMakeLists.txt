@@ -33,9 +33,10 @@ PUBLIC
 
 target_link_libraries(Engine
 PUBLIC
+#FetchContent dependencies
     DirectXMath
     DirectX-Headers
-
+    D3D12MemoryAllocator
 PRIVATE
     #directX
     d3d12
@@ -43,8 +44,6 @@ PRIVATE
     dxguid
     WinPixEventRuntime
 
-    #FetchContent dependencies
-    D3D12MemoryAllocator
 )
 
 add_custom_command(TARGET Engine POST_BUILD

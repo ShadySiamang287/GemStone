@@ -5,7 +5,9 @@
 #include "Core/Window.h"
 #include "Graphics/GraphicsContext.h"
 #include "Graphics/GraphicsPipeline.h"
-#include "Graphics/GraphicsRootSignature.h"
+#include "Graphics/RootSignature.h"
+
+#include "Graphics/GPUResource.h"
 
 namespace GEM{
     /// @brief The base version of the application that gets inherited from
@@ -23,7 +25,8 @@ namespace GEM{
         std::unique_ptr<Window> mWindow;
         std::unique_ptr<GraphicsContext> mContext;
         std::unique_ptr<GraphicsPipeline> mPipeline;
-        std::shared_ptr<GraphicsRootSignature> mRootSig;
+        std::shared_ptr<RootSignature> mRootSig;
+        std::unique_ptr<VertexBuffer> mVertexBuffer;
     };
 
     /// @brief This function is used to the instance of the application the program uses

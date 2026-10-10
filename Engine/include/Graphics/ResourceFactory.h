@@ -2,7 +2,9 @@
 
 #include "Graphics/GraphicsContext.h"
 #include "Graphics/GraphicsPipeline.h"
-#include "Graphics/GraphicsRootSignature.h"
+#include "Graphics/RootSignature.h"
+#include "Graphics/RenderingStructs.h"
+#include "Graphics/GPUResource.h"
 
 namespace GEM{
     class GraphicsContext;
@@ -19,7 +21,16 @@ namespace GEM{
         /// @param desc The specifics of the pipeline created
         /// @return A unique ptr to the the graphics pipeline
         static std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const GraphicsPipelineDescription& desc);
-        static std::shared_ptr<GraphicsRootSignature> CreateGraphicsRootSignature(const GraphicsRootSignatureDesc& desc);
+       
+        /// @brief This creates a root signature
+        /// @param desc the description of the root signature
+        /// @return a newly created root signature
+        static std::shared_ptr<RootSignature> CreateRootSignature(const RootSignatureDesc& desc);
+
+        /// @brief Creates a vertex buffer
+        /// @param verticies A span of verticies so any structure can be used
+        /// @return The newly created vertex buffer
+        static std::unique_ptr<VertexBuffer> CreateVertexBuffer(std::span<Vertex> verticies);
     private:
         static GraphicsContext* sContextPtr;
     };

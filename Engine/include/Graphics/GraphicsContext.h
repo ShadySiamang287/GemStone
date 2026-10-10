@@ -14,6 +14,7 @@ namespace GEM{
         void CreateFactory();
         void CreateAdaptor();
         void CreateDevice();
+        void CreateAllocator();
         void CreateCommandObjects();
         void CreateFence();
         void CreateSwapchain(HWND window, uint32_t width, uint32_t height);
@@ -21,6 +22,8 @@ namespace GEM{
 		Microsoft::WRL::ComPtr<IDXGIFactory6> mFactory;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter;
 		Microsoft::WRL::ComPtr<ID3D12Device5> mDevice;
+
+        D3D12MA::Allocator* mAllocator = nullptr;
 
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> mCommandQueue;
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>mCommandAllocator;

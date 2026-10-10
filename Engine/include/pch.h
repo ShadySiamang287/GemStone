@@ -10,6 +10,7 @@
 #include <DirectXMath.h>
 #include <dxgi1_6.h>
 #include <wrl.h>
+#include <D3D12MemAlloc.h>
 
 #include <stdexcept>
 #include <cstdio>
@@ -20,3 +21,5 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
+#include <span>
+#include <functional>

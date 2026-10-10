@@ -11,19 +11,31 @@ Application::Application(HINSTANCE instance) {
     GraphicsCommands::RegisterContext(mContext.get());
     ResourceFactory::RegisterContext(mContext.get());
 
-    GraphicsRootSignatureDesc rootDesc;
+    RootSignatureDesc rootDesc;
     rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     rootDesc.name = L"Root Signature";
-    mRootSig = ResourceFactory::CreateGraphicsRootSignature(rootDesc);
+    mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
 
     GraphicsPipelineDescription desc;
     desc.name = L"Triangle Test Pipeline";
     desc.rootSignature = mRootSig;
+    desc.inputElements = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    };
     desc.renderTargetFormats = {DXGI_FORMAT_R8G8B8A8_UNORM};
     desc.vertexShader = {"Shaders/TriangleVS.dxil"};
     desc.pixelShader = {"Shaders/TrianglePS.dxil"};
     desc.enableDepth = false;
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
+
+    std::array<Vertex, 3> vertices = {
+        Vertex{{0.0f, 0.5f, 0.f}, {1.f, 0.f, 0.f, 1.f}},
+        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f, 1.f}},
+        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 1.f, 0.f, 1.f}},
+    };
+
+    mVertexBuffer = ResourceFactory::CreateVertexBuffer(vertices);
 }
 
 void Application::Run() {
@@ -32,6 +44,7 @@ void Application::Run() {
         GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
         GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
         GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
+        GraphicsCommands::BindVertexBuffer(*mVertexBuffer.get());
         GraphicsCommands::Draw(3, 1, 0, 0);
         GraphicsCommands::EndFrame();
     }

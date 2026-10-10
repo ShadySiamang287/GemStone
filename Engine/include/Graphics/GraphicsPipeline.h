@@ -1,7 +1,7 @@
 #pragma once
 
 namespace GEM{
-    class GraphicsRootSignature;
+    class RootSignature;
 
     struct ShaderBytecode
     {
@@ -21,7 +21,7 @@ namespace GEM{
     struct GraphicsPipelineDescription
     {
         std::wstring name;
-        std::shared_ptr<const GraphicsRootSignature> rootSignature = nullptr;
+        std::shared_ptr<const RootSignature> rootSignature = nullptr;
 
         std::optional<ShaderBytecode> vertexShader = std::nullopt;
         std::optional<ShaderBytecode> pixelShader = std::nullopt;
