@@ -16,6 +16,8 @@ target_precompile_headers(Engine PRIVATE ${Engine_SOURCE_DIR}/include/pch.h)
 target_sources(Engine PRIVATE
     src/Core/Application.cpp
     src/Core/Window.cpp
+    src/GraphicsContext/GraphicsContext.cpp
+    src/GraphicsContext/GraphicsCommands.cpp
 )
 
 target_include_directories(Engine
@@ -27,20 +29,27 @@ PUBLIC
     cxx_std_23
 )
 
-target_link_libraries(Engine PRIVATE 
+target_link_libraries(Engine
+PUBLIC
+    DirectXMath
+    DirectX-Headers
+
+PRIVATE
     #directX
     d3d12
     dxgi
     dxguid
+    WinPixEventRuntime
 
     #FetchContent dependencies
-    DirectXMath
-    DirectX-Headers
     D3D12MemoryAllocator
 )
 
 add_custom_command(TARGET Engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         $<TARGET_FILE:Engine>
+        $<TARGET_FILE_DIR:Sandbox>
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:WinPixEventRuntime>
         $<TARGET_FILE_DIR:Sandbox>
 )

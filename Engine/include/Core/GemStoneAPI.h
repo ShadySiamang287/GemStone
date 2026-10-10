@@ -9,3 +9,11 @@
 #else
 	#error GemStone only supports windows!
 #endif
+
+#define THROW_IF_FAILED(expression)											\
+	do {																    \
+		const HRESULT result__ = (expression);								\
+		if (FAILED(result__)){												\
+			throw std::runtime_error("Direct3D call failed:, " #expression);\
+}																			\
+	} while (false);

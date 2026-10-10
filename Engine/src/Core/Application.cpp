@@ -1,21 +1,18 @@
 #include "Core/Application.h"
 
-#ifndef GEM_PLATFORM_WINDOWS
-#error GEM_PLATFORM_WINDOWS is missing
-#endif
-
-#ifndef GEM_BUILD_DLL
-#error GEM_BUILD_DLL is missing
-#endif
+#include "Graphics/GraphicsCommands.h"
 
 using namespace GEM;
 
 Application::Application(HINSTANCE instance) {
     mWindow = std::make_unique<Window>(instance, L"Gemstone Engine");
+    mContext = std::make_unique<GraphicsContext>(mWindow->GetHandle());
+    GraphicsCommands::RegisterContext(mContext.get());
 }
 
 void Application::Run() {
     while (mWindow->PollEvents()){
-
+        GraphicsCommands::BeginFrame();
+        GraphicsCommands::EndFrame();
     }
 }

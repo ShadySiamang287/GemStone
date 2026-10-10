@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <iostream>
 #include <memory>
+/// @brief This just creates the console when the program is in debug mode
 void CreateDebugConsole()
 {
 #ifdef _DEBUG

@@ -25,7 +25,7 @@ Window::Window(HINSTANCE instance, const std::wstring& windowName) {
 }
 
 bool Window::ConsumeResize(UINT& width, UINT& height) {
-	if (!mResizePending || mIsMinimized) {
+	if (!mResizePending || mIsMinimised) {
 		return false;
 	}
 
@@ -101,9 +101,9 @@ LRESULT Window::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
         return 0;
 
     case WM_SIZE:
-        mIsMinimized = wParam == SIZE_MINIMIZED;
+        mIsMinimised = wParam == SIZE_MINIMIZED;
 
-        if (!mIsMinimized) {
+        if (!mIsMinimised) {
             const UINT width = LOWORD(lParam);
             const UINT height = HIWORD(lParam);
 
