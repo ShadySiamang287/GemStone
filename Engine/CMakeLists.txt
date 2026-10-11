@@ -20,6 +20,8 @@ target_sources(Engine PRIVATE
     src/Graphics/GraphicsCommands.cpp
     src/Graphics/GraphicsPipeline.cpp
     src/Graphics/ResourceFactory.cpp
+    src/Renderer/RenderTargetManager.cpp
+    src/Renderer/Renderer.cpp
 )
 
 target_include_directories(Engine

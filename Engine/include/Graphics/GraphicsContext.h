@@ -47,5 +47,6 @@ namespace GEM{
 
         friend class GraphicsCommands;
         friend class ResourceFactory;
+        friend class RenderTargetManager;
    };
 }
