@@ -37,4 +37,25 @@ add_slang_shader(
         "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
+add_slang_shader(
+    TARGET GemStoneShaders
+    NAME FullscreenVS
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/FullScreenVert.slang"
+    ENTRY FullscreenVS
+    PROFILE vs_6_6
+    INCLUDE_DIRS
+        "${Sandbox_SOURCE_DIR}/Shaders"
+    ALL
+)
+
+add_slang_shader(
+    TARGET GemStoneShaders
+    NAME ToneMappingPS
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/ToneMapping.slang"
+    ENTRY ToneMappingPS
+    PROFILE ps_6_6
+    INCLUDE_DIRS
+        "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
 add_dependencies(Sandbox GemStoneShaders)

@@ -89,6 +89,7 @@ namespace GEM{
 
         friend class ResourceFactory;
         friend class RenderTargetManager;
+        friend class GraphicsCommands;
     };
 
     class RenderTarget : public GPUTexture {
@@ -97,8 +98,18 @@ namespace GEM{
             return mRTV;
         }
 
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const {
+            return mSRVCPU;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRV() const {
+            return mSRVGPU;
+        }
+
     private:
         D3D12_CPU_DESCRIPTOR_HANDLE mRTV{};
+        D3D12_CPU_DESCRIPTOR_HANDLE mSRVCPU{};
+        D3D12_GPU_DESCRIPTOR_HANDLE mSRVGPU{};
 
         D3D12_CLEAR_VALUE mClearValue{};
 
@@ -112,8 +123,18 @@ namespace GEM{
             return mDSV;
         }
 
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const {
+            return mSRVCPU;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRV() const {
+            return mSRVGPU;
+        }
+
     private:
         D3D12_CPU_DESCRIPTOR_HANDLE mDSV{};
+        D3D12_CPU_DESCRIPTOR_HANDLE mSRVCPU{};
+        D3D12_GPU_DESCRIPTOR_HANDLE mSRVGPU{};
 
         D3D12_CLEAR_VALUE mClearValue{};
 

@@ -12,6 +12,7 @@ GraphicsContext::GraphicsContext(HWND window) {
 	CreateCommandObjects();
 	CreateFence();
 	CreateSwapchain(window, WIDTH, HEIGHT);
+	CreateSRVHeap();
 }
 
 GraphicsContext::~GraphicsContext() {
@@ -192,13 +193,30 @@ void GraphicsContext::CreateSwapchain(HWND window, uint32_t width, uint32_t heig
 
     D3D12_CPU_DESCRIPTOR_HANDLE handle = mRTVHeap->GetCPUDescriptorHandleForHeapStart();
 
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+	rtvDesc.Format        = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+	rtvDesc.Texture2D.MipSlice = 0;
+	rtvDesc.Texture2D.PlaneSlice = 0;
+
     for (UINT index = 0;index < sFrameCount; index++)
     {
         THROW_IF_FAILED(mSwapChain->GetBuffer(index,IID_PPV_ARGS(&mRenderTargets[index])));
 
-        mDevice->CreateRenderTargetView(mRenderTargets[index].Get(), nullptr, handle);
+        mDevice->CreateRenderTargetView(mRenderTargets[index].Get(), &rtvDesc, handle);
 
         handle.ptr += mRTVDescriptorSize;
     }
 
+}
+
+void GraphicsContext::CreateSRVHeap() {
+	D3D12_DESCRIPTOR_HEAP_DESC description{};
+	description.NumDescriptors = sMaxSRVs;
+	description.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+	description.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	description.NodeMask = 0;
+
+	THROW_IF_FAILED(mDevice->CreateDescriptorHeap(&description, IID_PPV_ARGS(&mSRVHeap)));
+	THROW_IF_FAILED(mSRVHeap->SetName(L"SRV Descriptor Heap"));
 }

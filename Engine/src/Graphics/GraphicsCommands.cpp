@@ -58,32 +58,13 @@ void GraphicsCommands::BeginFrame() {
     THROW_IF_FAILED(sContextPtr->mCommandAllocator->Reset());
     
     THROW_IF_FAILED(commandList->Reset(sContextPtr->mCommandAllocator.Get(), nullptr));
+
+	ID3D12DescriptorHeap* descriptorHeaps[] = {
+		sContextPtr->mSRVHeap.Get()
+	};
+	commandList->SetDescriptorHeaps(1, descriptorHeaps);
+
     PIXBeginEvent(commandList, PIX_COLOR(255, 128, 0), "Test");
-
-    D3D12_RESOURCE_BARRIER barrier{};
-    barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-    barrier.Transition.pResource = sContextPtr->mRenderTargets[sContextPtr->mFrameIndex].Get();
-    barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-    barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-    barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-    commandList->ResourceBarrier(1, &barrier);
-
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sContextPtr->mRTVHeap->GetCPUDescriptorHandleForHeapStart();
-
-    rtvHandle.ptr += sContextPtr->mFrameIndex * sContextPtr->mRTVDescriptorSize;
-
-    const float clearColour[] =
-    {
-        0.05f,
-        0.10f,
-        0.20f,
-        1.0f
-    };
-
-    commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
-    
-    commandList->ClearRenderTargetView(rtvHandle, clearColour, 0, nullptr);
 }
 
 void GraphicsCommands::EndFrame() {
@@ -162,15 +143,6 @@ void GraphicsCommands::BindScissorRect(const int& x1, const int& y1, const int& 
     commandList->RSSetScissorRects(1, &scissor);
 }
 
-void GraphicsCommands::BindGraphicsPipeline(GraphicsPipeline& pipeline) {
-    CHECK_CONTEXT
-
-    auto* commandList = sContextPtr->mCommandList.Get();
-    commandList->SetGraphicsRootSignature(pipeline.mRootSignature.Get());
-    commandList->SetPipelineState(pipeline.mPipelineState.Get());
-    commandList->IASetPrimitiveTopology(pipeline.mTopology);
-}
-
 void GraphicsCommands::BindVertexBuffer(const VertexBuffer& buffer){
     CHECK_CONTEXT
 
@@ -183,6 +155,136 @@ void GraphicsCommands::BindIndexBuffer(const IndexBuffer& buffer) {
 
     auto* commandList = sContextPtr->mCommandList.Get();
     commandList->IASetIndexBuffer(&buffer.GetView());
+}
+
+void GraphicsCommands::BindGraphicsPipeline(GraphicsPipeline& pipeline) {
+    CHECK_CONTEXT
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->SetGraphicsRootSignature(pipeline.mRootSignature.Get());
+    commandList->SetPipelineState(pipeline.mPipelineState.Get());
+    commandList->IASetPrimitiveTopology(pipeline.mTopology);
+}
+
+void GraphicsCommands::BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor) {
+    CHECK_CONTEXT
+
+    sContextPtr->mCommandList->SetGraphicsRootDescriptorTable(
+        rootParameterIndex,
+        descriptor
+    );
+}
+
+void GraphicsCommands::TransitionRTV(RenderTarget& renderTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
+    CHECK_CONTEXT
+
+    if (before == after) {
+        return;
+    }
+
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        renderTarget.GetResource(),
+        before,
+        after
+    );
+
+    sContextPtr->mCommandList->ResourceBarrier(1, &barrier);
+    renderTarget.mState = after;
+}
+
+void GraphicsCommands::TransitionDSV(DepthTarget& depthTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
+    CHECK_CONTEXT
+
+    if (before == after) {
+        return;
+    }
+
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        depthTarget.GetResource(),
+        before,
+        after
+    );
+
+    sContextPtr->mCommandList->ResourceBarrier(1, &barrier);
+    depthTarget.mState = after;
+}
+
+void GraphicsCommands::ClearRenderTarget(RenderTarget& renderTarget, const float clearColour[4]) {
+    CHECK_CONTEXT
+
+    sContextPtr->mCommandList->ClearRenderTargetView(
+        renderTarget.GetRTV(),
+        clearColour,
+        0,
+        nullptr
+    );
+}
+
+void GraphicsCommands::ClearSwapchainImage(const float clearColour[4]) {
+    CHECK_CONTEXT
+
+    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sContextPtr->mRTVHeap->GetCPUDescriptorHandleForHeapStart();
+    rtvHandle.ptr += sContextPtr->mFrameIndex * sContextPtr->mRTVDescriptorSize;
+
+    sContextPtr->mCommandList->ClearRenderTargetView(
+        rtvHandle,
+        clearColour,
+        0,
+        nullptr
+    );
+}
+
+void GraphicsCommands::ClearDepthStencil(DepthTarget& depthTarget, D3D12_CLEAR_FLAGS clearFlags, float depth, UINT8 stencil) {
+    CHECK_CONTEXT
+
+    sContextPtr->mCommandList->ClearDepthStencilView(
+        depthTarget.GetDSV(),
+        clearFlags,
+        depth,
+        stencil,
+        0,
+        nullptr
+    );
+}
+
+
+void GraphicsCommands::BindRenderTargets(std::span<RenderTarget*> renderTargets, DepthTarget* depthTarget) {
+    CHECK_CONTEXT
+
+    auto* commandList = sContextPtr->mCommandList.Get();
+    std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> rtvHandles(renderTargets.size());
+
+    if (renderTargets.empty()) {
+        D3D12_RESOURCE_BARRIER barrier{};
+        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        barrier.Transition.pResource = sContextPtr->mRenderTargets[sContextPtr->mFrameIndex].Get();
+        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        commandList->ResourceBarrier(1, &barrier);
+
+        D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle = sContextPtr->mRTVHeap->GetCPUDescriptorHandleForHeapStart();
+        rtvHandle.ptr += sContextPtr->mFrameIndex * sContextPtr->mRTVDescriptorSize;
+        rtvHandles.push_back(rtvHandle);
+    }
+    else {
+        std::transform(renderTargets.begin(), renderTargets.end(), rtvHandles.begin(), [](RenderTarget* target) {
+            return target->GetRTV();
+        });
+    }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE dsvHandle{};
+    if (depthTarget) {
+        dsvHandle = depthTarget->GetDSV();
+    }
+
+    commandList->OMSetRenderTargets(
+        static_cast<UINT>(rtvHandles.size()),
+        rtvHandles.data(),
+        FALSE,
+        depthTarget ? &dsvHandle : nullptr
+    );
+
 }
 
 GraphicsContext* GraphicsCommands::sContextPtr = nullptr;

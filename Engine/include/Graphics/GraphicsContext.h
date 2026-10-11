@@ -18,6 +18,7 @@ namespace GEM{
         void CreateCommandObjects();
         void CreateFence();
         void CreateSwapchain(HWND window, uint32_t width, uint32_t height);
+        void CreateSRVHeap();
 
 		Microsoft::WRL::ComPtr<IDXGIFactory6> mFactory;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter;
@@ -32,8 +33,10 @@ namespace GEM{
         Microsoft::WRL::ComPtr<ID3D12Fence> mFence;
 
         static constexpr UINT sFrameCount = 2;
+        static constexpr UINT sMaxSRVs = 24;
         Microsoft::WRL::ComPtr<IDXGISwapChain3> mSwapChain;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRTVHeap;
+        Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mSRVHeap;
         std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, sFrameCount> mRenderTargets;
 
 		HANDLE mFenceEvent = nullptr;
