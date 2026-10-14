@@ -141,4 +141,24 @@ namespace GEM{
         friend class ResourceFactory;
         friend class RenderTargetManager;
     };
+
+    template <typename T>
+    class ConstantBuffer : public GPUResource {
+        static_assert(sizeof(T) < (64 * 1024));
+    public:
+        D3D12_GPU_VIRTUAL_ADDRESS GetAddress() const {
+            return mAllocation->GetResource()->GetGPUVirtualAddress();
+        }
+
+        void Upload(const T& data){
+            assert(mMappedData);
+
+            std::memcpy(mMappedData, &data, sizeof(T));
+        }
+    private:
+        void* mMappedData;
+
+        ConstantBuffer() = default;
+        friend class ResourceFactory;
+    };
 }

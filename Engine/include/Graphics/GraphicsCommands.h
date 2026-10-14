@@ -70,31 +70,17 @@ namespace GEM {
 
         static void BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor);
 
-        static void TransitionRTV(
-            RenderTarget& renderTarget,
-            D3D12_RESOURCE_STATES before,
-            D3D12_RESOURCE_STATES after
-        );
+        static void SetConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address);
 
-        static void TransitionDSV(
-            DepthTarget& depthTarget,
-            D3D12_RESOURCE_STATES before,
-            D3D12_RESOURCE_STATES after
-        );
+        static void TransitionRTV(RenderTarget& renderTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
 
-        static void ClearRenderTarget(
-            RenderTarget& renderTarget,
-            const float clearColour[4]
-        );
+        static void TransitionDSV(DepthTarget& depthTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+
+        static void ClearRenderTarget(RenderTarget& renderTarget,const float clearColour[4]);
 
         static void ClearSwapchainImage(const float clearColour[4]);
 
-        static void ClearDepthStencil(
-            DepthTarget& depthTarget,
-            D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH,
-            float depth = 1.0f,
-            UINT8 stencil = 0
-        );
+        static void ClearDepthStencil(DepthTarget& depthTarget, D3D12_CLEAR_FLAGS clearFlags = D3D12_CLEAR_FLAG_DEPTH, float depth = 1.0f, UINT8 stencil = 0);
 
         static void BindRenderTargets(std::span<RenderTarget*> renderTargets = {}, DepthTarget* depthTarget = nullptr);
 

@@ -3,6 +3,7 @@
 #include "Graphics/GraphicsPipeline.h"
 #include "Graphics/RootSignature.h"
 #include "Renderer/RenderTargetManager.h"
+#include "Graphics/RenderingStructs.h"
 
 namespace GEM{
     class GraphicsContext;
@@ -23,5 +24,7 @@ namespace GEM{
         std::shared_ptr<RootSignature> mFullscreenRootSig;
         std::unique_ptr<VertexBuffer> mVertexBuffer;
         std::unique_ptr<IndexBuffer> mIndexBuffer;
+        FrameData mFrameData;
+        std::unique_ptr<ConstantBuffer<FrameData>> mFrameDataBuffer;
     };
 }

@@ -5,12 +5,6 @@
 
 using namespace GEM;
 
-#define CHECK_CONTEXT(OUTPUT)     \
-    if (!sContextPtr) {  \
-        std::cerr << "Graphics Context not Registered to command list" << std::endl;\
-        return (OUTPUT);\
-    }\
-
 
 void ResourceFactory::RegisterContext(GraphicsContext* context) {
 	std::cout << "Graphics Context Registered to Resource Factory" << std::endl;

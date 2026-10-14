@@ -28,9 +28,45 @@ Renderer::Renderer(GraphicsContext& context) {
     );
     mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", 1280, 720);
 
+    D3D12_ROOT_PARAMETER frameDataParameter {};
+    frameDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    frameDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+
+    frameDataParameter.Descriptor.ShaderRegister = 0; // b0
+    frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
+
     RootSignatureDesc rootDesc;
     rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+    rootDesc.parameters.push_back(frameDataParameter);
     rootDesc.name = L"Root Signature";
+    
+    mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
+
+    DirectX::XMVECTOR position = DirectX::XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f);
+    DirectX::XMVECTOR target   = DirectX::XMVectorSet(0.0f, 0.0f,  0.0f, 1.0f);
+    DirectX::XMVECTOR up       = DirectX::XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f);
+
+    DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(
+        position,
+        target,
+        up
+    );
+    DirectX::XMStoreFloat4x4(&mFrameData.ViewMatrix, view);
+
+    float fov = DirectX::XMConvertToRadians(60.0f);
+    float aspectRatio = static_cast<float>(1280) / static_cast<float>(720);
+
+    DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(
+        fov,
+        aspectRatio,
+        0.1f,      // near plane
+        1000.0f    // far plane
+    );
+
+    DirectX::XMStoreFloat4x4(&mFrameData.ProjectionMatrix, projection);
+
+    mFrameDataBuffer = ResourceFactory::CreateConstantBuffer<FrameData>();
+    mFrameDataBuffer->Upload(mFrameData);
 
     D3D12_STATIC_SAMPLER_DESC linearWrap{};
     linearWrap.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
@@ -47,7 +83,6 @@ Renderer::Renderer(GraphicsContext& context) {
     linearWrap.RegisterSpace = 0;
     linearWrap.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
-    mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
 
     RootSignatureDesc fullscreenRootDesc;
     fullscreenRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
@@ -86,7 +121,8 @@ Renderer::Renderer(GraphicsContext& context) {
     desc.rootSignature = mRootSig;
     desc.inputElements = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
     desc.renderTargetFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT};
     desc.vertexShader = {"Shaders/TriangleVS.dxil"};
@@ -95,10 +131,10 @@ Renderer::Renderer(GraphicsContext& context) {
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
 
     std::array<Vertex, 4> vertices = {
-        Vertex{{-0.5f, 0.5f, 0.f}, {1.f, 0.f, 0.f, 1.f}},
-        Vertex{{0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f, 1.f}},
-        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 1.f, 0.f, 1.f}},
-        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 1.f, 1.f, 1.f}},
+        Vertex{{-0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 0.f, 0.f, 1.f}},
+        Vertex{{0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f},{0.f, 0.f, 1.f, 1.f}},
+        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {0.f, 1.f, 0.f, 1.f}},
+        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {0.f, 1.f, 1.f, 1.f}},
     };
     mVertexBuffer = ResourceFactory::CreateVertexBuffer(vertices);
     
@@ -129,6 +165,7 @@ void Renderer::Render() {
     GraphicsCommands::ClearDepthStencil(*mDepthTarget);
 
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
     GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
     GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
     GraphicsCommands::BindVertexBuffer(*mVertexBuffer.get());

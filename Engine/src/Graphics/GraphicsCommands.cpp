@@ -165,6 +165,12 @@ void GraphicsCommands::BindGraphicsPipeline(GraphicsPipeline& pipeline) {
     commandList->IASetPrimitiveTopology(pipeline.mTopology);
 }
 
+void GraphicsCommands::SetConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address) {
+    CHECK_CONTEXT
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->SetGraphicsRootConstantBufferView(index, address);
+}
+
 void GraphicsCommands::BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor) {
     CHECK_CONTEXT
 
