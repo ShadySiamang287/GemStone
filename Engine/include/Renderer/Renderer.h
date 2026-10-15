@@ -5,6 +5,8 @@
 #include "Renderer/RenderTargetManager.h"
 #include "Graphics/RenderingStructs.h"
 
+#include "Renderer/RenderPasses/RenderPass.h"
+
 namespace GEM{
     class GraphicsContext;
 
@@ -20,15 +22,19 @@ namespace GEM{
         RenderTarget* mLightingTarget = nullptr;
         DepthTarget* mDepthTarget = nullptr;
     
-        std::unique_ptr<GraphicsPipeline> mDefferedPipeline;
-        std::unique_ptr<GraphicsPipeline> mLightingPipeline;
+
+        std::vector<std::unique_ptr<RenderPass>> mRenderPasses;
+        //std::unique_ptr<GraphicsPipeline> mDefferedPipeline;
+        // std::unique_ptr<GraphicsPipeline> mLightingPipeline;
         std::unique_ptr<GraphicsPipeline> mToneMappingPipeline;
-        std::shared_ptr<RootSignature> mRootSig;
-        std::shared_ptr<RootSignature> mLightingSig;
+        //std::shared_ptr<RootSignature> mRootSig;
+        //std::shared_ptr<RootSignature> mLightingSig;
         std::shared_ptr<RootSignature> mFullscreenRootSig;
-        std::unique_ptr<VertexBuffer> mVertexBuffer;
-        std::unique_ptr<IndexBuffer> mIndexBuffer;
+        // std::unique_ptr<VertexBuffer> mVertexBuffer;
+        // std::unique_ptr<IndexBuffer> mIndexBuffer;
         FrameData mFrameData;
         std::unique_ptr<ConstantBuffer<FrameData>> mFrameDataBuffer;
+        std::vector<Model> mModels;
+    
     };
 }

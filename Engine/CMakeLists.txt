@@ -22,6 +22,9 @@ target_sources(Engine PRIVATE
     src/Graphics/ResourceFactory.cpp
     src/Renderer/RenderTargetManager.cpp
     src/Renderer/Renderer.cpp
+    src/Renderer/RenderPasses/DeferredPass.cpp
+    src/Renderer/RenderPasses/LightingPass.cpp
+    src/Renderer/RenderPasses/ToneMappingPass.cpp
 )
 
 target_include_directories(Engine

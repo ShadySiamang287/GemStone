@@ -308,6 +308,7 @@ std::unique_ptr<IndexBuffer> ResourceFactory::CreateIndexBuffer(std::span<uint32
 	buffer->mView.Format = DXGI_FORMAT_R32_UINT;
 
 	buffer->mAllocation->SetName(L"Index Buffer");
+	buffer->mIndexCount = indicies.size();
 
 	return buffer;
 }
