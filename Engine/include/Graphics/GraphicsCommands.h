@@ -21,6 +21,9 @@ namespace GEM {
         /// @brief Prepares the frame to be renderered
         static void BeginFrame();
 
+        /// @brief Gets the command list currently recording the frame.
+        static ID3D12GraphicsCommandList* GetCommandList();
+
         /// @brief Ends the frame and presents
         static void EndFrame();
         

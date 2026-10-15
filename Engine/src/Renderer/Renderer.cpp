@@ -9,6 +9,9 @@
 #include "Renderer/RenderPasses/DefferedPass.h"
 #include "Renderer/RenderPasses/LightingPass.h"
 #include "Renderer/RenderPasses/ToneMappingPass.h"
+#include "ImGui/ImGuiContext.h"
+
+#include <imgui.h>
 
 #include "pix3.h"
 
@@ -27,7 +30,9 @@ namespace {
     };
 }
 
-Renderer::Renderer(GraphicsContext& context) {
+Renderer::Renderer(GraphicsContext& context, HWND window) {
+    mImGuiContext = std::make_unique<ImGuiContext>(context, window);
+
     mRenderTargetsPtr = std::make_unique<RenderTargetManager>(context);
     mColourTarget = &mRenderTargetsPtr->CreateRenderTarget(
         L"Colour GBuffer",
@@ -104,12 +109,22 @@ Renderer::Renderer(GraphicsContext& context) {
     mModels.push_back(std::move(model));
 }
 
+Renderer::~Renderer() = default;
+
 void Renderer::Render() {
     GraphicsCommands::BeginFrame();
+    mImGuiContext->BeginFrame();
 
     for (auto& pass : mRenderPasses) {
         pass->Render(*mRenderTargetsPtr.get(), mModels);
     }
+
+    ImGui::Begin("GemStone");
+    ImGui::Text("Renderer online");
+    ImGui::Text("Models: %zu", mModels.size());
+    ImGui::End();
+
+    mImGuiContext->Render(GraphicsCommands::GetCommandList());
 
     GraphicsCommands::EndFrame();
 }

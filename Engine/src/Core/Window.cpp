@@ -1,5 +1,14 @@
 #include "Core/Window.h"
 
+#include <imgui.h>
+
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
+    HWND hwnd,
+    UINT message,
+    WPARAM wParam,
+    LPARAM lParam
+);
+
 using namespace GEM;
 
 Window::Window(HINSTANCE instance, const std::wstring& windowName) {
@@ -81,6 +90,8 @@ void Window::RegisterWindowClass(HINSTANCE instance)
 }
 
 LRESULT Window::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    ImGui_ImplWin32_WndProcHandler(hwnd, message, wParam, lParam);
+
     switch (message)
     {
     case WM_CLOSE:
@@ -92,12 +103,65 @@ LRESULT Window::HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPa
         PostQuitMessage(0);
         return 0;
 
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+        // Bit 30 is set when this is an auto-repeat rather than the initial press.
+        if ((lParam & (1LL << 30)) == 0) {
+            mInput.SetKeyDown(wParam);
+        }
+        return 0;
+
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        mInput.SetKeyUp(wParam);
+        return 0;
+
+    case WM_MOUSEMOVE:
+    {
+        mInput.setMouseX(static_cast<short>(LOWORD(lParam)));
+        mInput.setMouseY(static_cast<short>(HIWORD(lParam)));
+        mInput.setMouseActive(true);
+
+        TRACKMOUSEEVENT tracking{ sizeof(TRACKMOUSEEVENT), TME_LEAVE, hwnd, 0 };
+        TrackMouseEvent(&tracking);
+        return 0;
+    }
+
+    case WM_MOUSELEAVE:
+        mInput.setMouseActive(false);
+        return 0;
+
+    case WM_LBUTTONDOWN:
+        SetFocus(hwnd);
+        mInput.setLeftMouse(true);
+        SetCapture(hwnd);
+        return 0;
+
+    case WM_LBUTTONUP:
+        mInput.setLeftMouse(false);
+        if (!mInput.isRightMouseDown()) {
+            ReleaseCapture();
+        }
+        return 0;
+
     case WM_RBUTTONDOWN:
+        SetFocus(hwnd);
+        mInput.setRightMouse(true);
         SetCapture(hwnd);
         return 0;
 
     case WM_RBUTTONUP:
-        ReleaseCapture();
+        mInput.setRightMouse(false);
+        if (!mInput.isLeftMouseDown()) {
+            ReleaseCapture();
+        }
+        return 0;
+
+    case WM_KILLFOCUS:
+        mInput.Clear();
+        if (GetCapture() == hwnd) {
+            ReleaseCapture();
+        }
         return 0;
 
     case WM_SIZE:

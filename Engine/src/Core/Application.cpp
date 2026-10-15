@@ -11,7 +11,7 @@ Application::Application(HINSTANCE instance) {
     GraphicsCommands::RegisterContext(mContext.get());
     ResourceFactory::RegisterContext(mContext.get());
 
-    mRenderer = std::make_unique<Renderer>(*mContext.get());
+    mRenderer = std::make_unique<Renderer>(*mContext.get(), mWindow->GetHandle());
 }
 
 void Application::Run() {

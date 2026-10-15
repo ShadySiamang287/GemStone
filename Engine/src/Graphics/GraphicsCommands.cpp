@@ -65,6 +65,14 @@ void GraphicsCommands::BeginFrame() {
 	commandList->SetDescriptorHeaps(1, descriptorHeaps);
 }
 
+ID3D12GraphicsCommandList* GraphicsCommands::GetCommandList() {
+	if (!sContextPtr) {
+		return nullptr;
+	}
+
+	return sContextPtr->mCommandList.Get();
+}
+
 void GraphicsCommands::EndFrame() {
     CHECK_CONTEXT
 

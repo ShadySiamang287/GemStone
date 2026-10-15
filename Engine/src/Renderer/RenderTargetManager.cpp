@@ -108,7 +108,7 @@ RenderTarget& RenderTargetManager::CreateRenderTarget(
 		&srvDesc,
 		target.mSRVCPU
 	);
-
+	target.GetResource()->SetName(name.c_str());
 	auto [iterator, inserted] = mRenderTargets.emplace(std::move(name), std::move(target));
 
 	if (!inserted) {
@@ -166,6 +166,7 @@ DepthTarget& RenderTargetManager::CreateDepthTarget(std::wstring name, UINT widt
 
 	target.mAllocation->SetName(name.c_str());
 	target.mDSV = GetDSVHandle(dsvSlot);
+	target.GetResource()->SetName(name.c_str());
 
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
 	dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
@@ -242,7 +243,7 @@ UINT RenderTargetManager::AcquireDSVSlot() {
 }
 
 UINT RenderTargetManager::AcquireSRVSlot() {
-	if (mNextSRVSlot >= mContext.sMaxSRVs) {
+	if (mNextSRVSlot >= mContext.sImGuiSRVSlot) {
 		throw std::runtime_error("SRV descriptor heap is full");
 	}
 

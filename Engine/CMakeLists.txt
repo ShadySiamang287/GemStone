@@ -25,6 +25,8 @@ target_sources(Engine PRIVATE
     src/Renderer/RenderPasses/DeferredPass.cpp
     src/Renderer/RenderPasses/LightingPass.cpp
     src/Renderer/RenderPasses/ToneMappingPass.cpp
+    src/Core/Input.cpp
+    src/ImGui/ImGuiContext.cpp
 )
 
 target_include_directories(Engine
@@ -42,6 +44,7 @@ PUBLIC
     DirectXMath
     DirectX-Headers
     D3D12MemoryAllocator
+    imgui
 PRIVATE
     #directX
     d3d12

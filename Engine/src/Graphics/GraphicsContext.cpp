@@ -219,4 +219,19 @@ void GraphicsContext::CreateSRVHeap() {
 
 	THROW_IF_FAILED(mDevice->CreateDescriptorHeap(&description, IID_PPV_ARGS(&mSRVHeap)));
 	THROW_IF_FAILED(mSRVHeap->SetName(L"SRV Descriptor Heap"));
+	mSRVDescriptorSize = mDevice->GetDescriptorHandleIncrementSize(
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+	);
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE GraphicsContext::GetImGuiSRVCPUHandle() const {
+	D3D12_CPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetCPUDescriptorHandleForHeapStart();
+	handle.ptr += static_cast<SIZE_T>(sImGuiSRVSlot) * mSRVDescriptorSize;
+	return handle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE GraphicsContext::GetImGuiSRVGPUHandle() const {
+	D3D12_GPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetGPUDescriptorHandleForHeapStart();
+	handle.ptr += static_cast<UINT64>(sImGuiSRVSlot) * mSRVDescriptorSize;
+	return handle;
 }

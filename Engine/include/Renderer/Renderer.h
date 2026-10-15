@@ -9,10 +9,12 @@
 
 namespace GEM{
     class GraphicsContext;
+    class ImGuiContext;
 
     class Renderer{
     public:
-        Renderer(GraphicsContext& context);
+        Renderer(GraphicsContext& context, HWND window);
+        ~Renderer();
         void Render();
 
     private:
@@ -35,6 +37,7 @@ namespace GEM{
         FrameData mFrameData;
         std::unique_ptr<ConstantBuffer<FrameData>> mFrameDataBuffer;
         std::vector<Model> mModels;
+        std::unique_ptr<ImGuiContext> mImGuiContext;
     
     };
 }

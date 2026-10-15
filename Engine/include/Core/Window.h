@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/Input.h"
+
 namespace GEM {
 /// @brief this class encapsulates the win32 window
 class Window{
@@ -31,6 +33,16 @@ class Window{
 			return mHandle;
 		}
 
+		/// @brief Gets the current keyboard and mouse state.
+		/// @return The input state owned by this window.
+		Input& GetInput() {
+			return mInput;
+		}
+
+		const Input& GetInput() const {
+			return mInput;
+		}
+
 		/// @brief checks if the window should close
 		/// @return if the window needs to close
 		bool ShouldClose() const {
@@ -45,6 +57,7 @@ class Window{
 		bool mIsMinimised = false;
 		UINT mWidth = 1280;
 		UINT mHeight = 720;
+		Input mInput;
 
 		LRESULT HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
