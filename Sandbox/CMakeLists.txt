@@ -58,4 +58,15 @@ add_slang_shader(
         "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
+add_slang_shader(
+    TARGET GemStoneShaders
+    NAME LightingPS
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Lighting.slang"
+    ENTRY LightingPS
+    PROFILE ps_6_6
+    INCLUDE_DIRS
+        "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
+
 add_dependencies(Sandbox GemStoneShaders)

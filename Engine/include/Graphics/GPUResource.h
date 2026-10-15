@@ -156,7 +156,7 @@ namespace GEM{
             std::memcpy(mMappedData, &data, sizeof(T));
         }
     private:
-        void* mMappedData;
+        void* mMappedData = nullptr;
 
         ConstantBuffer() = default;
         friend class ResourceFactory;

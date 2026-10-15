@@ -6,7 +6,7 @@ struct VertexInput {
 
 struct VertexOutput {
     float4 sv_position : SV_Position;
-    float3 worldPosition : TEXCOORD0;
+    float3 normal : NORMAL;
     float4 color : COLOR0;
 };
 
@@ -19,16 +19,23 @@ cbuffer FrameData : register(b0)
 [shader("vertex")]
 VertexOutput vertMain(VertexInput input) {
     VertexOutput output;
-    output.worldPosition = input.position;
     output.sv_position = mul(ProjectionMatrix, mul(ViewMatrix, float4(input.position, 1.0)));
     output.color = input.colour;
+    output.normal = input.normal;
     return output;
 }
 
+struct FragOut {
+    float4 colour : SV_Target0;
+    float4 normal : SV_Target1;
+}
 
 [shader("fragment")]
-float4 fragMain(VertexOutput inVert) : SV_Target
+FragOut fragMain(VertexOutput inVert)
 {
-    float3 color = inVert.color.rgb;
-    return float4(color, 1.0);
+    FragOut output;
+
+    output.colour = float4(inVert.color.rgb, 1.0);
+    output.normal = float4(inVert.normal, 1.0);
+    return output;
 }

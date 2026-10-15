@@ -63,8 +63,6 @@ void GraphicsCommands::BeginFrame() {
 		sContextPtr->mSRVHeap.Get()
 	};
 	commandList->SetDescriptorHeaps(1, descriptorHeaps);
-
-    PIXBeginEvent(commandList, PIX_COLOR(255, 128, 0), "Test");
 }
 
 void GraphicsCommands::EndFrame() {
@@ -78,8 +76,6 @@ void GraphicsCommands::EndFrame() {
     
     sContextPtr->mCommandList->ResourceBarrier(1, &barrier);
     
-    PIXEndEvent(sContextPtr->mCommandList.Get());
-
     THROW_IF_FAILED(sContextPtr->mCommandList->Close());
     
     ID3D12CommandList* commandLists[] =
@@ -291,6 +287,19 @@ void GraphicsCommands::BindRenderTargets(std::span<RenderTarget*> renderTargets,
         depthTarget ? &dsvHandle : nullptr
     );
 
+}
+
+void GraphicsCommands::BeginLabel(uint32_t colour, std::string string) {
+    CHECK_CONTEXT   
+    auto* commandList = sContextPtr->mCommandList.Get();
+    PIXBeginEvent(commandList, colour, string.c_str());
+
+}
+
+void GraphicsCommands::EndLabel() {
+    CHECK_CONTEXT
+    auto* commandList = sContextPtr->mCommandList.Get();
+    PIXEndEvent(commandList);
 }
 
 GraphicsContext* GraphicsCommands::sContextPtr = nullptr;

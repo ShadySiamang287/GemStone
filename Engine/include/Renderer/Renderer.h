@@ -15,12 +15,16 @@ namespace GEM{
 
     private:
         std::unique_ptr<RenderTargetManager> mRenderTargetsPtr;
-        RenderTarget* mSceneTarget = nullptr;
+        RenderTarget* mColourTarget = nullptr;
+        RenderTarget* mNormalTarget = nullptr;
+        RenderTarget* mLightingTarget = nullptr;
         DepthTarget* mDepthTarget = nullptr;
     
-        std::unique_ptr<GraphicsPipeline> mPipeline;
+        std::unique_ptr<GraphicsPipeline> mDefferedPipeline;
+        std::unique_ptr<GraphicsPipeline> mLightingPipeline;
         std::unique_ptr<GraphicsPipeline> mToneMappingPipeline;
         std::shared_ptr<RootSignature> mRootSig;
+        std::shared_ptr<RootSignature> mLightingSig;
         std::shared_ptr<RootSignature> mFullscreenRootSig;
         std::unique_ptr<VertexBuffer> mVertexBuffer;
         std::unique_ptr<IndexBuffer> mIndexBuffer;

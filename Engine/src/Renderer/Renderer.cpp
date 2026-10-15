@@ -6,6 +6,8 @@
 #include "Graphics/ResourceFactory.h"
 #include "Graphics/GraphicsCommands.h"
 
+#include "pix3.h"
+
 using namespace GEM;
 
 namespace {
@@ -15,17 +17,36 @@ namespace {
         0.20f,
         1.0f
     };
+
+    constexpr std::array<float, 4> gbufferClearColour = {
+        0.f, 0.f, 0.f, 1.f
+    };
 }
 
 Renderer::Renderer(GraphicsContext& context) {
     mRenderTargetsPtr = std::make_unique<RenderTargetManager>(context);
-    mSceneTarget = &mRenderTargetsPtr->CreateRenderTarget(
+    mColourTarget = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Colour GBuffer",
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        1280,
+        720,
+        gbufferClearColour
+        );
+    mNormalTarget = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Normal GBuffer",
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        1280,
+        720,
+        gbufferClearColour
+    );
+    mLightingTarget = &mRenderTargetsPtr->CreateRenderTarget(
         L"Scene Color",
         DXGI_FORMAT_R16G16B16A16_FLOAT,
         1280,
         720,
         sceneClearColour
     );
+    
     mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", 1280, 720);
 
     D3D12_ROOT_PARAMETER frameDataParameter {};
@@ -38,7 +59,7 @@ Renderer::Renderer(GraphicsContext& context) {
     RootSignatureDesc rootDesc;
     rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     rootDesc.parameters.push_back(frameDataParameter);
-    rootDesc.name = L"Root Signature";
+    rootDesc.name = L"Deferred Root Signature";
     
     mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
 
@@ -47,7 +68,7 @@ Renderer::Renderer(GraphicsContext& context) {
     DirectX::XMVECTOR up       = DirectX::XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f);
 
     DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(
-        position,
+        position,       
         target,
         up
     );
@@ -106,6 +127,64 @@ Renderer::Renderer(GraphicsContext& context) {
 
     mFullscreenRootSig = ResourceFactory::CreateRootSignature(fullscreenRootDesc);
 
+    RootSignatureDesc lightingRootDesc;
+    lightingRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    lightingRootDesc.name = L"Lighting Root Signature";
+
+    D3D12_DESCRIPTOR_RANGE albedoRange{};
+    albedoRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    albedoRange.NumDescriptors = 1;
+    albedoRange.BaseShaderRegister = 0;
+    albedoRange.RegisterSpace = 0;
+    albedoRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE normalRange{};
+    normalRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    normalRange.NumDescriptors = 1;
+    normalRange.BaseShaderRegister = 1;
+    normalRange.RegisterSpace = 0;
+    normalRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_DESCRIPTOR_RANGE depthRange{};
+    depthRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    depthRange.NumDescriptors = 1;
+    depthRange.BaseShaderRegister = 2;
+    depthRange.RegisterSpace = 0;
+    depthRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER albedoParam{};
+    albedoParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    albedoParam.DescriptorTable.NumDescriptorRanges = 1;
+    albedoParam.DescriptorTable.pDescriptorRanges = &albedoRange;
+    albedoParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    D3D12_ROOT_PARAMETER normalParam{};
+    normalParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    normalParam.DescriptorTable.NumDescriptorRanges = 1;
+    normalParam.DescriptorTable.pDescriptorRanges = &normalRange;
+    normalParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    D3D12_ROOT_PARAMETER depthParam{};
+    depthParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    depthParam.DescriptorTable.NumDescriptorRanges = 1;
+    depthParam.DescriptorTable.pDescriptorRanges = &depthRange;
+    depthParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    lightingRootDesc.parameters.push_back(albedoParam);
+    lightingRootDesc.parameters.push_back(normalParam);
+    lightingRootDesc.parameters.push_back(depthParam);
+    lightingRootDesc.samplers.push_back(linearWrap);
+
+    mLightingSig = ResourceFactory::CreateRootSignature(lightingRootDesc);
+
+    GraphicsPipelineDescription lightingDesc;
+    lightingDesc.name = L"Lighting Pipeline";
+    lightingDesc.rootSignature = mLightingSig;
+    lightingDesc.vertexShader = { "Shaders/FullscreenVS.dxil" };
+    lightingDesc.pixelShader = { "Shaders/LightingPS.dxil" };
+    lightingDesc.renderTargetFormats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+    lightingDesc.enableDepth = false;
+
+    mLightingPipeline = ResourceFactory::CreateGraphicsPipeline(lightingDesc);
+
     GraphicsPipelineDescription toneMappingDesc;
     toneMappingDesc.name = L"Tone Mapping Pipeline";
     toneMappingDesc.rootSignature = mFullscreenRootSig;
@@ -117,24 +196,28 @@ Renderer::Renderer(GraphicsContext& context) {
     mToneMappingPipeline = ResourceFactory::CreateGraphicsPipeline(toneMappingDesc);
 
     GraphicsPipelineDescription desc;
-    desc.name = L"Triangle Test Pipeline";
+    desc.name = L"Deferred Pipeline";
     desc.rootSignature = mRootSig;
     desc.inputElements = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
-    desc.renderTargetFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT};
+    desc.renderTargetFormats = {DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM};
     desc.vertexShader = {"Shaders/TriangleVS.dxil"};
     desc.pixelShader = {"Shaders/TrianglePS.dxil"};
     desc.enableDepth = true;
-    mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
+    mDefferedPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
+
+
+
+
 
     std::array<Vertex, 4> vertices = {
-        Vertex{{-0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 0.f, 0.f, 1.f}},
-        Vertex{{0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f},{0.f, 0.f, 1.f, 1.f}},
-        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {0.f, 1.f, 0.f, 1.f}},
-        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {0.f, 1.f, 1.f, 1.f}},
+        Vertex{{-0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f, 1.f}},
+        Vertex{{0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f},{1.f, 1.f, 1.f, 1.f}},
+        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f, 1.f}},
+        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f, 1.f}},
     };
     mVertexBuffer = ResourceFactory::CreateVertexBuffer(vertices);
     
@@ -148,44 +231,99 @@ Renderer::Renderer(GraphicsContext& context) {
 
 void Renderer::Render() {
     GraphicsCommands::BeginFrame();
+    GraphicsCommands::BeginLabel(PIX_COLOR(255, 128, 0), "forward pass");
 
     GraphicsCommands::TransitionRTV(
-        *mSceneTarget,
-        mSceneTarget->GetState(),
+        *mColourTarget,
+        mColourTarget->GetState(),
         D3D12_RESOURCE_STATE_RENDER_TARGET
     );
 
-    std::array<RenderTarget*, 1> sceneTargets = {
-        mSceneTarget
+    GraphicsCommands::TransitionRTV(
+        *mNormalTarget,
+        mNormalTarget->GetState(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
+
+    GraphicsCommands::TransitionDSV(
+        *mDepthTarget, mDepthTarget->GetState(),
+        D3D12_RESOURCE_STATE_DEPTH_WRITE
+    );
+
+    std::array<RenderTarget*, 2> sceneTargets = {
+        mColourTarget, mNormalTarget
     };
 
     GraphicsCommands::BindRenderTargets(sceneTargets, mDepthTarget);
 
-    GraphicsCommands::ClearRenderTarget(*mSceneTarget, sceneClearColour.data());
+    GraphicsCommands::ClearRenderTarget(*mColourTarget, gbufferClearColour.data());
+    GraphicsCommands::ClearRenderTarget(*mNormalTarget, gbufferClearColour.data());
     GraphicsCommands::ClearDepthStencil(*mDepthTarget);
 
-    GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    GraphicsCommands::BindGraphicsPipeline(*mDefferedPipeline.get());
     GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
     GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
     GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
     GraphicsCommands::BindVertexBuffer(*mVertexBuffer.get());
     GraphicsCommands::BindIndexBuffer(*mIndexBuffer.get());
     GraphicsCommands::DrawIndexed(6, 1, 0, 0, 0);
+    GraphicsCommands::EndLabel();
 
+
+    GraphicsCommands::BeginLabel(PIX_COLOR(255, 82, 124), "Lighting Pass");
     GraphicsCommands::TransitionRTV(
-        *mSceneTarget,
-        mSceneTarget->GetState(),
+        *mColourTarget,
+        mColourTarget->GetState(),
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
     );
 
+    GraphicsCommands::TransitionRTV(
+        *mNormalTarget,
+        mNormalTarget->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+
+    GraphicsCommands::TransitionDSV(
+        *mDepthTarget, mDepthTarget->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+
+    GraphicsCommands::TransitionRTV(
+        *mLightingTarget,
+        mLightingTarget->GetState(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
+
+
+    std::array<RenderTarget*, 1> lightingTargets = {
+        mLightingTarget
+    };
+
+    GraphicsCommands::BindRenderTargets(lightingTargets);
+    GraphicsCommands::ClearRenderTarget(*mLightingTarget, sceneClearColour.data());
+    GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
+    GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
+    GraphicsCommands::BindGraphicsPipeline(*mLightingPipeline.get());
+    GraphicsCommands::BindSRV(0, mColourTarget->GetSRV());
+    GraphicsCommands::BindSRV(1, mNormalTarget->GetSRV());
+    GraphicsCommands::BindSRV(2, mDepthTarget->GetSRV());
+    GraphicsCommands::Draw(3, 1, 0, 0);
+    GraphicsCommands::EndLabel();
+
+    GraphicsCommands::BeginLabel(PIX_COLOR(72, 123, 255), "Tone Mapping");
+    GraphicsCommands::TransitionRTV(
+        *mLightingTarget, mLightingTarget->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
     GraphicsCommands::BindRenderTargets();
     GraphicsCommands::ClearSwapchainImage(sceneClearColour.data());
 
     GraphicsCommands::BindGraphicsPipeline(*mToneMappingPipeline.get());
     GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
     GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
-    GraphicsCommands::BindSRV(0, mSceneTarget->GetSRV());
+    GraphicsCommands::BindSRV(0, mLightingTarget->GetSRV());
     GraphicsCommands::Draw(3, 1, 0, 0);
+    GraphicsCommands::EndLabel();
 
     GraphicsCommands::EndFrame();
 }

@@ -1,6 +1,6 @@
 find_program(GEMSTONE_SLANGC
     NAMES slangc slangc.exe
-    HINTS "$ENV{VULKAN_SDK}/Bin"
+    HINTS "${CMAKE_SOURCE_DIR}/slang"
 )
 
 if(NOT GEMSTONE_SLANGC)

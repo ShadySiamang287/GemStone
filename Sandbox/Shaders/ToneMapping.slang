@@ -21,6 +21,5 @@ float4 ToneMappingPS(VSInput input) : SV_Target {
     float exposure = 1.0;
     float3 combinedColour = hdrColor * exposure;
     float3 toneMappedColour = ReinhardLuminance(combinedColour);
-    float3 sRGBColour = pow(toneMappedColour, float3(1.0 / 2.2));
     return float4(toneMappedColour, 1.0);
 }

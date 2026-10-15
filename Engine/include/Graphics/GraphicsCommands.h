@@ -84,6 +84,9 @@ namespace GEM {
 
         static void BindRenderTargets(std::span<RenderTarget*> renderTargets = {}, DepthTarget* depthTarget = nullptr);
 
+        static void BeginLabel(uint32_t colour, std::string string);
+        static void EndLabel();
+
     private:
         static GraphicsContext* sContextPtr;
     };
