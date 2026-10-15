@@ -119,6 +119,10 @@ void Renderer::Render() {
         pass->Render(*mRenderTargetsPtr.get(), mModels);
     }
 
+    for (auto& pass : mRenderPasses){
+        pass->OnImGuiRender();
+    }
+
     ImGui::Begin("GemStone");
     ImGui::Text("Renderer online");
     ImGui::Text("Models: %zu", mModels.size());

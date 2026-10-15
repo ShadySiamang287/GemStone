@@ -1,5 +1,9 @@
 Texture2D SceneTexture : register(t0);
 SamplerState LinearSampler : register(s0);
+cbuffer Data : register(b0)
+{
+    float exposure;
+}
 
 struct VSInput {
     float4 position : SV_Position;
@@ -18,7 +22,6 @@ float3 ReinhardLuminance(float3 color)
 [shader("fragment")]
 float4 ToneMappingPS(VSInput input) : SV_Target {
     float3 hdrColor = SceneTexture.Sample(LinearSampler, input.uv).rgb;
-    float exposure = 1.0;
     float3 combinedColour = hdrColor * exposure;
     float3 toneMappedColour = ReinhardLuminance(combinedColour);
     return float4(toneMappedColour, 1.0);

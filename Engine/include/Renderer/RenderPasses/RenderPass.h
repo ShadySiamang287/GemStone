@@ -10,5 +10,7 @@ namespace GEM{
         virtual ~RenderPass() = default;
 
         virtual void Render(RenderTargetManager& manager, std::span<Model> models) = 0;
+    
+        virtual void OnImGuiRender() {}
     };
 }

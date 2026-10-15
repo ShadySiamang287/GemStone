@@ -3,6 +3,8 @@
 #include "Graphics/GraphicsCommands.h"
 #include "pix3.h"
 
+#include "imgui.h"
+
 using namespace GEM;
 
 ToneMappingPass::ToneMappingPass() {
@@ -44,7 +46,16 @@ ToneMappingPass::ToneMappingPass() {
     fullscreenSRVParameter.DescriptorTable.pDescriptorRanges = &fullscreenSRVRange;
     fullscreenSRVParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+    D3D12_ROOT_PARAMETER frameDataParameter {};
+    frameDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    frameDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    frameDataParameter.Descriptor.ShaderRegister = 0; // b0
+    frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
+
+
     fullscreenRootDesc.parameters.push_back(fullscreenSRVParameter);
+    fullscreenRootDesc.parameters.push_back(frameDataParameter);
     fullscreenRootDesc.samplers.push_back(linearWrap);
 
     mRootSig = ResourceFactory::CreateRootSignature(fullscreenRootDesc);
@@ -58,11 +69,15 @@ ToneMappingPass::ToneMappingPass() {
     toneMappingDesc.enableDepth = false;
 
     mPipeline = ResourceFactory::CreateGraphicsPipeline(toneMappingDesc);
+
+    mData.exposure = 1.f;
+    mConstantBuffer = ResourceFactory::CreateConstantBuffer<ToneMappingData>();
 }
 
 void ToneMappingPass::Render(RenderTargetManager& manager, std::span<Model> models) {
     
     auto* lightingTarget = manager.GetRenderTarget(L"Scene Color");
+    mConstantBuffer->Upload(mData);
 
     GraphicsCommands::BeginLabel(PIX_COLOR(72, 123, 255), "Tone Mapping");
     GraphicsCommands::TransitionRTV(
@@ -76,6 +91,13 @@ void ToneMappingPass::Render(RenderTargetManager& manager, std::span<Model> mode
     GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
     GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
     GraphicsCommands::BindSRV(0, lightingTarget->GetSRV());
+    GraphicsCommands::SetConstantBufferView(1, mConstantBuffer->GetAddress());
     GraphicsCommands::Draw(3, 1, 0, 0);
     GraphicsCommands::EndLabel();
+}
+
+void ToneMappingPass::OnImGuiRender() {
+    ImGui::Begin("Tone Mapping Pass");
+    ImGui::SliderFloat("Exposure", &mData.exposure, 0.f, 1.f);
+    ImGui::End();
 }
