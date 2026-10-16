@@ -4,8 +4,17 @@
 #include "Graphics/ResourceFactory.h"
 
 namespace GEM {
+    enum class ToneMappingType : uint16_t {
+        ReinhardLuminance,
+        AECS,
+        UNCHARTED,
+        AGX
+    };
+
     struct ToneMappingData{
         float exposure = 0.1;
+        float hableLuminance = 11.2;
+        ToneMappingType type = ToneMappingType::ReinhardLuminance;
     };
 
     class ToneMappingPass : public RenderPass{

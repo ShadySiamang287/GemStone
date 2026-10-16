@@ -70,7 +70,6 @@ ToneMappingPass::ToneMappingPass() {
 
     mPipeline = ResourceFactory::CreateGraphicsPipeline(toneMappingDesc);
 
-    mData.exposure = 1.f;
     mConstantBuffer = ResourceFactory::CreateConstantBuffer<ToneMappingData>();
 }
 
@@ -99,5 +98,23 @@ void ToneMappingPass::Render(RenderTargetManager& manager, std::span<Model> mode
 void ToneMappingPass::OnImGuiRender() {
     ImGui::Begin("Tone Mapping Pass");
     ImGui::SliderFloat("Exposure", &mData.exposure, 0.f, 1.f);
+    constexpr const char* toneMappingNames[] =
+    {
+        "Reinhard Luminance",
+        "AECS",
+        "Uncharted 2",
+        "AXG (blender)"
+    };
+
+    int selectedType = static_cast<int>(mData.type);
+
+    if (ImGui::Combo("Tone mapping", &selectedType, toneMappingNames, IM_ARRAYSIZE(toneMappingNames))){
+        mData.type = static_cast<ToneMappingType>(selectedType);
+    }
+
+    if (selectedType == 2) {
+        ImGui::SliderFloat("Uncharted 2 Luminace", &mData.hableLuminance, 0.f, 15.f);
+    }
+
     ImGui::End();
 }
