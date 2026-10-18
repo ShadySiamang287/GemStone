@@ -1,14 +1,16 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 namespace GEM{
     struct Vertex{
-        DirectX::XMFLOAT3 position;
-        DirectX::XMFLOAT3 normal;
-        DirectX::XMFLOAT4 colour;
+        glm::vec3 position;
+        glm::vec3 normal;
+        glm::vec4 colour;
     };
 
     struct FrameData {
-        DirectX::XMFLOAT4X4 ViewMatrix;
-        DirectX::XMFLOAT4X4 ProjectionMatrix;
+        glm::mat4 ViewMatrix;
+        glm::mat4 ProjectionMatrix;
     };
 }

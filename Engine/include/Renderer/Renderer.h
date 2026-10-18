@@ -16,8 +16,10 @@ namespace GEM{
         Renderer(GraphicsContext& context, HWND window);
         ~Renderer();
         void Render();
+        void Resize(UINT width, UINT height);
 
     private:
+        GraphicsContext& mContext;
         std::unique_ptr<RenderTargetManager> mRenderTargetsPtr;
         RenderTarget* mColourTarget = nullptr;
         RenderTarget* mNormalTarget = nullptr;

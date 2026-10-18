@@ -1,12 +1,6 @@
 include(FetchContent)
 
 fetchcontent_declare(
-    DirectXMath
-    GIT_REPOSITORY https://github.com/microsoft/DirectXMath.git
-    GIT_TAG main
-)
-
-fetchcontent_declare(
   DirectXHeaders 
   GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
   GIT_TAG main
@@ -18,7 +12,13 @@ fetchcontent_declare(
   GIT_TAG master
 )
 
-fetchcontent_makeavailable(DirectXMath DirectXHeaders D3D12MemoryAllocator)
+fetchcontent_declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG 1.0.1
+)
+
+fetchcontent_makeavailable(DirectXHeaders D3D12MemoryAllocator glm)
 
 FetchContent_Declare(
     WinPixEventRuntime

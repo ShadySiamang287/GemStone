@@ -33,6 +33,14 @@ class Window{
 			return mHandle;
 		}
 
+		UINT GetWidth() const {
+			return mWidth;
+		}
+
+		UINT GetHeight() const {
+			return mHeight;
+		}
+
 		/// @brief Gets the current keyboard and mouse state.
 		/// @return The input state owned by this window.
 		Input& GetInput() {

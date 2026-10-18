@@ -108,11 +108,9 @@ float4 ToneMappingPS(VSInput input) : SV_Target {
             toneMappedColour = ReinhardLuminance(combinedColour);
             break;
         case Type::AECS:
-            // Implement AECS tone mapping here
             toneMappedColour = ACESFilm(combinedColour);
             break;
         case Type::Uncharted2:
-            // Implement Uncharted 2 tone mapping here
             float3 current = Uncharted2Tonemap(combinedColour);
             float3 whiteScale = 1.0 / Uncharted2Tonemap(float3(hableValue));
             toneMappedColour = current * whiteScale;

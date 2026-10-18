@@ -41,9 +41,9 @@ PUBLIC
 target_link_libraries(Engine
 PUBLIC
 #FetchContent dependencies
-    DirectXMath
     DirectX-Headers
     D3D12MemoryAllocator
+    glm::glm
     imgui
 PRIVATE
     #directX

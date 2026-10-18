@@ -20,6 +20,7 @@ namespace GEM{
     };
 
     class GPUBuffer : public GPUResource{
+    public:
         uint64_t GetSize() const {
             return mSize;
         }
@@ -143,7 +144,7 @@ namespace GEM{
     };
 
     template <typename T>
-    class ConstantBuffer : public GPUResource {
+    class ConstantBuffer : public GPUBuffer {
         static_assert(sizeof(T) < (64 * 1024));
     public:
         D3D12_GPU_VIRTUAL_ADDRESS GetAddress() const {
@@ -159,6 +160,42 @@ namespace GEM{
         void* mMappedData = nullptr;
 
         ConstantBuffer() = default;
+        friend class ResourceFactory;
+    };
+
+    template <typename T, size_t Capacity>
+    class StructuredBuffer : public GPUBuffer{
+    public:
+        static_assert(Capacity > 0);
+        static_assert(std::is_trivially_copyable_v<T>);
+        static_assert(sizeof(T) % 4 == 0);
+
+        static constexpr size_t GetCapacity() noexcept {
+            return Capacity;
+        }
+
+        static constexpr UINT GetStride() noexcept {
+            return static_cast<UINT>(sizeof(T));
+        }
+
+        UINT GetElementCount() const noexcept {
+            return mElementCount;
+        }
+
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const noexcept {
+            return mSRVCPU;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRV() const noexcept {
+            return mSRVGPU;
+        }
+
+    private:
+        D3D12_CPU_DESCRIPTOR_HANDLE mSRVCPU{};
+        D3D12_GPU_DESCRIPTOR_HANDLE mSRVGPU{};
+
+        UINT mElementCount = 0;
+
         friend class ResourceFactory;
     };
 }

@@ -4,7 +4,8 @@
 
 using namespace GEM;
 
-RenderTargetManager::RenderTargetManager(GraphicsContext& context) : mContext(context) {
+RenderTargetManager::RenderTargetManager(GraphicsContext& context)
+	: mContext(context), mWidth(context.GetWidth()), mHeight(context.GetHeight()) {
 	ID3D12Device* device = mContext.mDevice.Get();
 
 	D3D12_DESCRIPTOR_HEAP_DESC rtvDesc{};
@@ -25,7 +26,125 @@ RenderTargetManager::RenderTargetManager(GraphicsContext& context) : mContext(co
 
 	mRTVDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	mDSVDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	mSRVDescriptorSize = device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+}
+
+void RenderTargetManager::Resize(UINT width, UINT height) {
+	if (width == 0 || height == 0) {
+		return;
+	}
+
+	ID3D12Device* device = mContext.mDevice.Get();
+
+	for (auto& [name, target] : mRenderTargets) {
+		target.mAllocation.Reset();
+		target.mDescription = CD3DX12_RESOURCE_DESC::Tex2D(
+			target.mDescription.Format,
+			width,
+			height,
+			1,
+			1,
+			1,
+			0,
+			D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+		);
+		target.mState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+
+		D3D12MA::ALLOCATION_DESC allocationDesc{};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+		THROW_IF_FAILED(mContext.mAllocator->CreateResource(
+			&allocationDesc,
+			&target.mDescription,
+			target.mState,
+			&target.mClearValue,
+			target.mAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		));
+
+		target.mAllocation->SetName(name.c_str());
+		device->CreateRenderTargetView(
+			target.GetResource(),
+			nullptr,
+			target.mRTV
+		);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.Format = target.mDescription.Format;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.PlaneSlice = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+		device->CreateShaderResourceView(
+			target.GetResource(),
+			&srvDesc,
+			target.mSRVCPU
+		);
+		target.GetResource()->SetName(name.c_str());
+	}
+
+	for (auto& [name, target] : mDepthTargets) {
+		target.mAllocation.Reset();
+		target.mDescription = CD3DX12_RESOURCE_DESC::Tex2D(
+			DXGI_FORMAT_R32_TYPELESS,
+			width,
+			height,
+			1,
+			1,
+			1,
+			0,
+			D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+		);
+		target.mState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+
+		D3D12MA::ALLOCATION_DESC allocationDesc{};
+		allocationDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+		THROW_IF_FAILED(mContext.mAllocator->CreateResource(
+			&allocationDesc,
+			&target.mDescription,
+			target.mState,
+			&target.mClearValue,
+			target.mAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		));
+
+		target.mAllocation->SetName(name.c_str());
+		target.GetResource()->SetName(name.c_str());
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc{};
+		dsvDesc.Format = DXGI_FORMAT_D32_FLOAT;
+		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+		dsvDesc.Texture2D.MipSlice = 0;
+
+		device->CreateDepthStencilView(
+			target.GetResource(),
+			&dsvDesc,
+			target.mDSV
+		);
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+		srvDesc.Texture2D.MostDetailedMip = 0;
+		srvDesc.Texture2D.MipLevels = 1;
+		srvDesc.Texture2D.PlaneSlice = 0;
+		srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+		device->CreateShaderResourceView(
+			target.GetResource(),
+			&srvDesc,
+			target.mSRVCPU
+		);
+	}
+
+	mWidth = width;
+	mHeight = height;
 }
 
 RenderTarget& RenderTargetManager::CreateRenderTarget(
@@ -243,11 +362,7 @@ UINT RenderTargetManager::AcquireDSVSlot() {
 }
 
 UINT RenderTargetManager::AcquireSRVSlot() {
-	if (mNextSRVSlot >= mContext.sImGuiSRVSlot) {
-		throw std::runtime_error("SRV descriptor heap is full");
-	}
-
-	return mNextSRVSlot++;
+	return mContext.AllocateSRVSlot();
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetRTVHandle(UINT slot) const noexcept {
@@ -263,13 +378,9 @@ D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetDSVHandle(UINT slot) const n
 }
 
 D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetSRVCPUHandle(UINT slot) const noexcept {
-	D3D12_CPU_DESCRIPTOR_HANDLE handle = mContext.mSRVHeap->GetCPUDescriptorHandleForHeapStart();
-	handle.ptr += static_cast<SIZE_T>(slot) * mSRVDescriptorSize;
-	return handle;
+	return mContext.GetSRVCPUHandle(slot);
 }
 
 D3D12_GPU_DESCRIPTOR_HANDLE RenderTargetManager::GetSRVGPUHandle(UINT slot) const noexcept {
-	D3D12_GPU_DESCRIPTOR_HANDLE handle = mContext.mSRVHeap->GetGPUDescriptorHandleForHeapStart();
-	handle.ptr += static_cast<UINT64>(slot) * mSRVDescriptorSize;
-	return handle;
+	return mContext.GetSRVGPUHandle(slot);
 }

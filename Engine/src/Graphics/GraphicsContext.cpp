@@ -4,14 +4,15 @@ using namespace GEM;
 
 using namespace Microsoft::WRL;
 
-GraphicsContext::GraphicsContext(HWND window) {
+GraphicsContext::GraphicsContext(HWND window, UINT width, UINT height)
+    : mWidth(width), mHeight(height) {
 	CreateFactory();
 	CreateAdaptor();
 	CreateDevice();
 	CreateAllocator();
 	CreateCommandObjects();
 	CreateFence();
-	CreateSwapchain(window, WIDTH, HEIGHT);
+	CreateSwapchain(window, mWidth, mHeight);
 	CreateSRVHeap();
 }
 
@@ -191,23 +192,71 @@ void GraphicsContext::CreateSwapchain(HWND window, uint32_t width, uint32_t heig
 
     mRTVDescriptorSize = mDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-    D3D12_CPU_DESCRIPTOR_HANDLE handle = mRTVHeap->GetCPUDescriptorHandleForHeapStart();
+	CreateSwapchainRenderTargets();
+}
 
-	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc = {};
-	rtvDesc.Format        = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+void GraphicsContext::CreateSwapchainRenderTargets() {
+	D3D12_CPU_DESCRIPTOR_HANDLE handle = mRTVHeap->GetCPUDescriptorHandleForHeapStart();
+
+	D3D12_RENDER_TARGET_VIEW_DESC rtvDesc{};
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 	rtvDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
 	rtvDesc.Texture2D.MipSlice = 0;
 	rtvDesc.Texture2D.PlaneSlice = 0;
 
-    for (UINT index = 0;index < sFrameCount; index++)
-    {
-        THROW_IF_FAILED(mSwapChain->GetBuffer(index,IID_PPV_ARGS(&mRenderTargets[index])));
+	for (UINT index = 0; index < sFrameCount; ++index) {
+		THROW_IF_FAILED(mSwapChain->GetBuffer(
+			index,
+			IID_PPV_ARGS(&mRenderTargets[index])
+		));
 
-        mDevice->CreateRenderTargetView(mRenderTargets[index].Get(), &rtvDesc, handle);
+		mDevice->CreateRenderTargetView(
+			mRenderTargets[index].Get(),
+			&rtvDesc,
+			handle
+		);
 
-        handle.ptr += mRTVDescriptorSize;
-    }
+		handle.ptr += mRTVDescriptorSize;
+	}
+}
 
+void GraphicsContext::WaitForGpu() {
+	++mFenceValue;
+	THROW_IF_FAILED(mCommandQueue->Signal(mFence.Get(), mFenceValue));
+
+	if (mFence->GetCompletedValue() < mFenceValue) {
+		THROW_IF_FAILED(mFence->SetEventOnCompletion(mFenceValue, mFenceEvent));
+		WaitForSingleObject(mFenceEvent, INFINITE);
+	}
+}
+
+void GraphicsContext::Resize(UINT width, UINT height) {
+	if (width == 0 || height == 0) {
+		return;
+	}
+
+	if (width == mWidth && height == mHeight) {
+		return;
+	}
+
+	WaitForGpu();
+
+	for (auto& renderTarget : mRenderTargets) {
+		renderTarget.Reset();
+	}
+
+	THROW_IF_FAILED(mSwapChain->ResizeBuffers(
+		sFrameCount,
+		width,
+		height,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		0
+	));
+
+	mWidth = width;
+	mHeight = height;
+	mFrameIndex = mSwapChain->GetCurrentBackBufferIndex();
+	CreateSwapchainRenderTargets();
 }
 
 void GraphicsContext::CreateSRVHeap() {
@@ -233,5 +282,25 @@ D3D12_CPU_DESCRIPTOR_HANDLE GraphicsContext::GetImGuiSRVCPUHandle() const {
 D3D12_GPU_DESCRIPTOR_HANDLE GraphicsContext::GetImGuiSRVGPUHandle() const {
 	D3D12_GPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetGPUDescriptorHandleForHeapStart();
 	handle.ptr += static_cast<UINT64>(sImGuiSRVSlot) * mSRVDescriptorSize;
+	return handle;
+}
+
+UINT GraphicsContext::AllocateSRVSlot() {
+	if (mNextSRVSlot >= sImGuiSRVSlot) {
+		throw std::runtime_error("SRV descriptor heap is full");
+	}
+
+	return mNextSRVSlot++;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE GraphicsContext::GetSRVCPUHandle(UINT slot) const noexcept {
+	D3D12_CPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetCPUDescriptorHandleForHeapStart();
+	handle.ptr += static_cast<SIZE_T>(slot) * mSRVDescriptorSize;
+	return handle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE GraphicsContext::GetSRVGPUHandle(UINT slot) const noexcept {
+	D3D12_GPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetGPUDescriptorHandleForHeapStart();
+	handle.ptr += static_cast<UINT64>(slot) * mSRVDescriptorSize;
 	return handle;
 }

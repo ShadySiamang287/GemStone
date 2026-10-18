@@ -30,56 +30,66 @@ namespace {
     };
 }
 
-Renderer::Renderer(GraphicsContext& context, HWND window) {
+Renderer::Renderer(GraphicsContext& context, HWND window)
+    : mContext(context) {
     mImGuiContext = std::make_unique<ImGuiContext>(context, window);
 
     mRenderTargetsPtr = std::make_unique<RenderTargetManager>(context);
+    const UINT width = context.GetWidth();
+    const UINT height = context.GetHeight();
     mColourTarget = &mRenderTargetsPtr->CreateRenderTarget(
         L"Colour GBuffer",
         DXGI_FORMAT_R8G8B8A8_UNORM,
-        1280,
-        720,
+        width,
+        height,
         gbufferClearColour
         );
     mNormalTarget = &mRenderTargetsPtr->CreateRenderTarget(
         L"Normal GBuffer",
         DXGI_FORMAT_R8G8B8A8_UNORM,
-        1280,
-        720,
+        width,
+        height,
         gbufferClearColour
     );
     mLightingTarget = &mRenderTargetsPtr->CreateRenderTarget(
         L"Scene Color",
         DXGI_FORMAT_R16G16B16A16_FLOAT,
-        1280,
-        720,
+        width,
+        height,
+        sceneClearColour
+    );
+    auto mBloomTarget1 = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Bloom Ping",
+        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        width,
+        height,
+        sceneClearColour
+    );
+    auto mBloomTarget2 = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Bloom Pong",
+        DXGI_FORMAT_R16G16B16A16_FLOAT,
+        width,
+        height,
         sceneClearColour
     );
     
-    mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", 1280, 720);
+    mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", width, height);
 
-    DirectX::XMVECTOR position = DirectX::XMVectorSet(0.0f, 0.0f, -5.0f, 1.0f);
-    DirectX::XMVECTOR target   = DirectX::XMVectorSet(0.0f, 0.0f,  0.0f, 1.0f);
-    DirectX::XMVECTOR up       = DirectX::XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f);
+    const glm::vec3 position{0.0f, 0.0f, -5.0f};
+    const glm::vec3 target{0.0f, 0.0f, 0.0f};
+    const glm::vec3 up{0.0f, 1.0f, 0.0f};
 
-    DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(
-        position,       
-        target,
-        up
-    );
-    DirectX::XMStoreFloat4x4(&mFrameData.ViewMatrix, view);
+    mFrameData.ViewMatrix = glm::lookAtLH(position, target, up);
 
-    float fov = DirectX::XMConvertToRadians(60.0f);
-    float aspectRatio = static_cast<float>(1280) / static_cast<float>(720);
+    const float fov = glm::radians(60.0f);
+    const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
-    DirectX::XMMATRIX projection = DirectX::XMMatrixPerspectiveFovLH(
+    mFrameData.ProjectionMatrix = glm::perspectiveLH_ZO(
         fov,
         aspectRatio,
         0.1f,      // near plane
         1000.0f    // far plane
     );
-
-    DirectX::XMStoreFloat4x4(&mFrameData.ProjectionMatrix, projection);
 
     mFrameDataBuffer = ResourceFactory::CreateConstantBuffer<FrameData>();
     mFrameDataBuffer->Upload(mFrameData);
@@ -110,6 +120,27 @@ Renderer::Renderer(GraphicsContext& context, HWND window) {
 }
 
 Renderer::~Renderer() = default;
+
+void Renderer::Resize(UINT width, UINT height) {
+    if (width == 0 || height == 0) {
+        return;
+    }
+
+    if (width == mContext.GetWidth() && height == mContext.GetHeight()) {
+        return;
+    }
+
+    mContext.Resize(width, height);
+    mRenderTargetsPtr->Resize(width, height);
+
+    mFrameData.ProjectionMatrix = glm::perspectiveLH_ZO(
+        glm::radians(60.0f),
+        static_cast<float>(width) / static_cast<float>(height),
+        0.1f,
+        1000.0f
+    );
+    mFrameDataBuffer->Upload(mFrameData);
+}
 
 void Renderer::Render() {
     GraphicsCommands::BeginFrame();

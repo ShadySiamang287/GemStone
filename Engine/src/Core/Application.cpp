@@ -7,7 +7,11 @@ using namespace GEM;
 
 Application::Application(HINSTANCE instance) {
     mWindow = std::make_unique<Window>(instance, L"Gemstone Engine");
-    mContext = std::make_unique<GraphicsContext>(mWindow->GetHandle());
+    mContext = std::make_unique<GraphicsContext>(
+        mWindow->GetHandle(),
+        mWindow->GetWidth(),
+        mWindow->GetHeight()
+    );
     GraphicsCommands::RegisterContext(mContext.get());
     ResourceFactory::RegisterContext(mContext.get());
 
@@ -16,6 +20,17 @@ Application::Application(HINSTANCE instance) {
 
 void Application::Run() {
     while (mWindow->PollEvents()){
+        UINT width = 0;
+        UINT height = 0;
+
+        if (mWindow->ConsumeResize(width, height)) {
+            mRenderer->Resize(width, height);
+        }
+
+        if (mWindow->IsMinimised()) {
+            continue;
+        }
+
         mRenderer->Render();
     }
 }

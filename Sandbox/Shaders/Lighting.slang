@@ -8,8 +8,21 @@ struct VSInput {
     float2 uv : TEXCOORD0;
 };
 
+struct FragOut {
+    float4 colour : SV_Target0;
+    float4 brightness : SV_Target1;
+};
+
 [shader("fragment")]
-float4 LightingPS(VSInput input) : SV_Target {
-    float3 colour = albedo.Sample(LinearSampler, input.uv).rgb;
-    return float4(colour, 1.0f);
+FragOut LightingPS(VSInput input) {
+    FragOut output;
+    float4 colour = albedo.Sample(LinearSampler, input.uv);
+    float brightness = dot(colour.rgb, float3(0.2126, 0.7152, 0.0722));
+    if (brightness > 1.0f) {
+        output.brightness = float4(colour.rgb, 1.0f);
+    } else {
+        output.brightness = float4(0.0f, 0.0f, 0.0f, 1.0f);
+    }
+    output.colour = colour;
+    return output;
 }

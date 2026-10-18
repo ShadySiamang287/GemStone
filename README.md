@@ -6,7 +6,7 @@ This is a DirectX 12 test engine im developing that uses slang shaders. It compi
 - C++ 23 Compatible Compiler
 - CMake 3.28 or newer
 - A DirectX 12 capabled windows system
-- [DirectXMath](https://github.com/microsoft/DirectXMath)
+- [GLM](https://github.com/g-truc/glm)
 - [DirectX Headers](https://github.com/microsoft/DirectX-Headers)
 - [DirectX12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
 - [Slang](https://github.com/shader-slang/slang)

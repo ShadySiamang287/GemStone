@@ -74,7 +74,7 @@ LightingPass::LightingPass() {
     lightingDesc.rootSignature = mRootSig;
     lightingDesc.vertexShader = { "Shaders/FullscreenVS.dxil" };
     lightingDesc.pixelShader = { "Shaders/LightingPS.dxil" };
-    lightingDesc.renderTargetFormats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
+    lightingDesc.renderTargetFormats = { DXGI_FORMAT_R16G16B16A16_FLOAT,DXGI_FORMAT_R16G16B16A16_FLOAT };
     lightingDesc.enableDepth = false;
 
     mPipeline = ResourceFactory::CreateGraphicsPipeline(lightingDesc);
@@ -92,6 +92,7 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
     auto* normalTarget = manager.GetRenderTarget(L"Normal GBuffer");
     auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
     auto* lightingTarget = manager.GetRenderTarget(L"Scene Color");
+    auto* bloomTarget = manager.GetRenderTarget(L"Bloom Ping");
 
 
     GraphicsCommands::BeginLabel(PIX_COLOR(255, 82, 124), "Lighting Pass");
@@ -118,15 +119,34 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
         D3D12_RESOURCE_STATE_RENDER_TARGET
     );
 
+    GraphicsCommands::TransitionRTV(
+        *bloomTarget,
+        bloomTarget->GetState(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
 
-    std::array<RenderTarget*, 1> lightingTargets = {
-        lightingTarget
+
+    std::array<RenderTarget*, 2> lightingTargets = {
+        lightingTarget, bloomTarget
     };
 
     GraphicsCommands::BindRenderTargets(lightingTargets);
     GraphicsCommands::ClearRenderTarget(*lightingTarget, mClearColour.data());
-    GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
-    GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
+    GraphicsCommands::ClearRenderTarget(*bloomTarget, mClearColour.data());
+    GraphicsCommands::BindViewport(
+        0.f,
+        0.f,
+        static_cast<float>(manager.GetWidth()),
+        static_cast<float>(manager.GetHeight()),
+        0.f,
+        1.f
+    );
+    GraphicsCommands::BindScissorRect(
+        0,
+        0,
+        static_cast<int>(manager.GetWidth()),
+        static_cast<int>(manager.GetHeight())
+    );
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
     GraphicsCommands::BindSRV(0, colourTarget->GetSRV());
     GraphicsCommands::BindSRV(1, normalTarget->GetSRV());

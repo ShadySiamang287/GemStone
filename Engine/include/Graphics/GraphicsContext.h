@@ -6,7 +6,7 @@ namespace GEM{
     public:
         /// @brief Initialises the objects
         /// @param window The window being renderered too 
-        GraphicsContext(HWND window);
+        GraphicsContext(HWND window, UINT width = 1280, UINT height = 720);
         /// @brief This is needed since the fence needs to empty before the objects are destroyed.
         ~GraphicsContext();
 
@@ -29,6 +29,20 @@ namespace GEM{
         D3D12_CPU_DESCRIPTOR_HANDLE GetImGuiSRVCPUHandle() const;
         D3D12_GPU_DESCRIPTOR_HANDLE GetImGuiSRVGPUHandle() const;
 
+        UINT GetWidth() const noexcept {
+            return mWidth;
+        }
+
+        UINT GetHeight() const noexcept {
+            return mHeight;
+        }
+
+        void Resize(UINT width, UINT height);
+
+        UINT AllocateSRVSlot();
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUHandle(UINT slot) const noexcept;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUHandle(UINT slot) const noexcept;
+
     private:
         void CreateFactory();
         void CreateAdaptor();
@@ -37,7 +51,9 @@ namespace GEM{
         void CreateCommandObjects();
         void CreateFence();
         void CreateSwapchain(HWND window, uint32_t width, uint32_t height);
+        void CreateSwapchainRenderTargets();
         void CreateSRVHeap();
+        void WaitForGpu();
 
 		Microsoft::WRL::ComPtr<IDXGIFactory6> mFactory;
 		Microsoft::WRL::ComPtr<IDXGIAdapter4> mAdapter;
@@ -63,11 +79,12 @@ namespace GEM{
 		UINT64 mFenceValue = 0;
         UINT mRTVDescriptorSize = 0;
         UINT mSRVDescriptorSize = 0;
+        UINT mNextSRVSlot = 0;
 
         UINT mFrameIndex = 0;
 
-        UINT WIDTH = 1280;
-        UINT HEIGHT = 720;
+        UINT mWidth = 1280;
+        UINT mHeight = 720;
 
         friend class GraphicsCommands;
         friend class ResourceFactory;

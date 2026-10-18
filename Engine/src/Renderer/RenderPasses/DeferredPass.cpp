@@ -78,8 +78,20 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
 
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
     GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
-    GraphicsCommands::BindViewport(0.f, 0.f, 1280.f, 720.f, 0.f, 1.f);
-    GraphicsCommands::BindScissorRect(0, 0, 1280, 720);
+    GraphicsCommands::BindViewport(
+        0.f,
+        0.f,
+        static_cast<float>(manager.GetWidth()),
+        static_cast<float>(manager.GetHeight()),
+        0.f,
+        1.f
+    );
+    GraphicsCommands::BindScissorRect(
+        0,
+        0,
+        static_cast<int>(manager.GetWidth()),
+        static_cast<int>(manager.GetHeight())
+    );
     for (auto& model : models){
         for (auto& primitive : model.primitives) {
             GraphicsCommands::BindVertexBuffer(*primitive.vertexBuffer.get());

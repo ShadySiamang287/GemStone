@@ -14,6 +14,16 @@ namespace GEM{
     public:
         explicit RenderTargetManager(GraphicsContext& context);
 
+        void Resize(UINT width, UINT height);
+
+        UINT GetWidth() const noexcept {
+            return mWidth;
+        }
+
+        UINT GetHeight() const noexcept {
+            return mHeight;
+        }
+
         RenderTarget& CreateRenderTarget(
             std::wstring name,
             DXGI_FORMAT format,
@@ -47,10 +57,10 @@ namespace GEM{
 
         UINT mRTVDescriptorSize = 0;
         UINT mDSVDescriptorSize = 0;
-        UINT mSRVDescriptorSize = 0;
         UINT mNextRTVSlot = 0;
         UINT mNextDSVSlot = 0;
-        UINT mNextSRVSlot = 0;
+        UINT mWidth = 1280;
+        UINT mHeight = 720;
 
         std::unordered_map<std::wstring, RenderTarget> mRenderTargets;
         std::unordered_map<std::wstring, DepthTarget> mDepthTargets;

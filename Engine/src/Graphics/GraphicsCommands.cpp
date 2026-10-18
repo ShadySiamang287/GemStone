@@ -38,15 +38,7 @@ void GraphicsCommands::ExecuteImmediate(const std::function<void(ID3D12GraphicsC
 
     context->mCommandQueue->ExecuteCommandLists(1, lists);
 
-    ++context->mFenceValue;
-
-    THROW_IF_FAILED(context->mCommandQueue->Signal(context->mFence.Get(), context->mFenceValue));
-
-    if (context->mFence->GetCompletedValue() < context->mFenceValue){
-        THROW_IF_FAILED(context->mFence->SetEventOnCompletion(context->mFenceValue,context->mFenceEvent));
-
-        WaitForSingleObject(context->mFenceEvent, INFINITE);
-    }
+    context->WaitForGpu();
 }
 
 
@@ -97,16 +89,7 @@ void GraphicsCommands::EndFrame() {
     
     sContextPtr->mFrameIndex = sContextPtr->mSwapChain->GetCurrentBackBufferIndex();
     
-    sContextPtr->mFenceValue++;
-    
-    THROW_IF_FAILED(sContextPtr->mCommandQueue->Signal(sContextPtr->mFence.Get(), sContextPtr->mFenceValue));
-    
-    if (sContextPtr->mFence->GetCompletedValue() < sContextPtr->mFenceValue)
-    {
-        THROW_IF_FAILED(sContextPtr->mFence->SetEventOnCompletion(sContextPtr->mFenceValue, sContextPtr->mFenceEvent));
-        
-        WaitForSingleObject(sContextPtr->mFenceEvent, INFINITE);
-    }
+    sContextPtr->WaitForGpu();
 }
 
 void GraphicsCommands::Draw(const int& vertexCount, const int& instanceCount, const int& firstVertex, const int& firstInstance) {
