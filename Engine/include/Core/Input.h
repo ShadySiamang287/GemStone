@@ -2,7 +2,7 @@
 
 namespace GEM{
     /// @brief Stores the current keyboard and mouse state for a window.
-    class Input
+    class GEM_API Input
     {
         /// Mouse struct, stores position, button state, and active status.
         struct Mouse

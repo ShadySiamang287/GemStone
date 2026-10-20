@@ -8,6 +8,7 @@ target_sources(Sandbox PRIVATE
     src/RenderPasses/DeferredPass.cpp
     src/RenderPasses/LightingPass.cpp
     src/RenderPasses/ToneMappingPass.cpp
+    src/Camera.cpp
 )
 
 target_include_directories(Sandbox PRIVATE ${Sandbox_SOURCE_DIR}/include)

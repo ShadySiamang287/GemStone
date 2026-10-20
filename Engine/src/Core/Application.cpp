@@ -23,7 +23,7 @@ void Application::Run() {
         UINT width = 0;
         UINT height = 0;
         mTimeManager.Update();
-        mScene->Update(mWindow->GetInput(), mTimeManager.GetDeltaTime());
+        mScene->Update(mWindow->GetInput(), *mRenderer.get(), mTimeManager.GetDeltaTime());
 
         if (mWindow->ConsumeResize(width, height)) {
             mRenderer->Resize(width, height);

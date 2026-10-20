@@ -72,16 +72,10 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
     
     mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", width, height);
 
-    const glm::vec3 position{0.0f, 0.0f, -5.0f};
-    const glm::vec3 target{0.0f, 0.0f, 0.0f};
-    const glm::vec3 up{0.0f, 1.0f, 0.0f};
-
-    mFrameData.ViewMatrix = glm::lookAtLH(position, target, up);
-
     const float fov = glm::radians(60.0f);
     const float aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
-    mFrameData.ProjectionMatrix = glm::perspectiveLH_ZO(
+    mFrameData.ProjectionMatrix = glm::perspectiveRH_ZO(
         fov,
         aspectRatio,
         0.1f,      // near plane
@@ -90,10 +84,6 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
 
     mFrameDataBuffer = ResourceFactory::CreateConstantBuffer<FrameData>();
     mFrameDataBuffer->Upload(mFrameData);
-
-    // mRenderPasses.push_back(std::make_unique<DeferredPass>(mFrameDataBuffer.get()));
-    // mRenderPasses.push_back(std::make_unique<LightingPass>());
-    // mRenderPasses.push_back(std::make_unique<ToneMappingPass>());
 
 
     std::array<Vertex, 4> vertices = {
@@ -130,7 +120,7 @@ void Renderer::Resize(UINT width, UINT height) {
     mContext.Resize(width, height);
     mRenderTargetsPtr->Resize(width, height);
 
-    mFrameData.ProjectionMatrix = glm::perspectiveLH_ZO(
+    mFrameData.ProjectionMatrix = glm::perspectiveRH_ZO(
         glm::radians(60.0f),
         static_cast<float>(width) / static_cast<float>(height),
         0.1f,
@@ -142,6 +132,7 @@ void Renderer::Resize(UINT width, UINT height) {
 void Renderer::Render(Scene* scene) {
     GraphicsCommands::BeginFrame();
     mImGuiContext->BeginFrame();
+    mFrameDataBuffer->Upload(mFrameData);
 
     for (auto& pass : mRenderPasses) {
         pass->Render(*mRenderTargetsPtr.get(), mModels);

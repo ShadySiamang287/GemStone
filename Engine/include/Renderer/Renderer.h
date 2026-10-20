@@ -27,6 +27,10 @@ namespace GEM{
             return mFrameDataBuffer.get();
         }
 
+        void SetCameraMatrix(glm::mat4 matrix) {
+            mFrameData.ViewMatrix = matrix;
+        }
+
     private:
         GraphicsContext& mContext;
         std::unique_ptr<RenderTargetManager> mRenderTargetsPtr;
