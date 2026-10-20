@@ -10,12 +10,13 @@
 namespace GEM{
     class GraphicsContext;
     class ImGuiContext;
+    class Scene;
 
     class GEM_API Renderer{
     public:
         Renderer(GraphicsContext& context, HWND window);
         ~Renderer();
-        void Render();
+        void Render(Scene* scene);
         void Resize(UINT width, UINT height);
 
         void AddRenderPass(std::unique_ptr<RenderPass> pass) {

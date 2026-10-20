@@ -139,7 +139,7 @@ void Renderer::Resize(UINT width, UINT height) {
     mFrameDataBuffer->Upload(mFrameData);
 }
 
-void Renderer::Render() {
+void Renderer::Render(Scene* scene) {
     GraphicsCommands::BeginFrame();
     mImGuiContext->BeginFrame();
 

@@ -7,6 +7,7 @@
 #include "Renderer/Renderer.h"
 
 #include "Core/Scene.h"
+#include "Core/TimeManager.h"
 
 namespace GEM{
     /// @brief The base version of the application that gets inherited from
@@ -23,6 +24,7 @@ namespace GEM{
     private:
     std::unique_ptr<Window> mWindow;
     std::unique_ptr<GraphicsContext> mContext;
+    TimeManager mTimeManager;
     
     protected:
     std::unique_ptr<Renderer> mRenderer;

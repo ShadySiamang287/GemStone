@@ -22,6 +22,8 @@ void Application::Run() {
     while (mWindow->PollEvents()){
         UINT width = 0;
         UINT height = 0;
+        mTimeManager.Update();
+        mScene->Update(mWindow->GetInput(), mTimeManager.GetDeltaTime());
 
         if (mWindow->ConsumeResize(width, height)) {
             mRenderer->Resize(width, height);
@@ -31,6 +33,6 @@ void Application::Run() {
             continue;
         }
 
-        mRenderer->Render();
+        mRenderer->Render(mScene.get());
     }
 }

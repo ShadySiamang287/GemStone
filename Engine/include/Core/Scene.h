@@ -1,9 +1,12 @@
 #pragma once
 
+#include "Core/Input.h"
+
 namespace GEM{
     class GEM_API Scene{
     public:
-        void Update() {}
-        void Render() {} 
+        virtual ~Scene() = default;
+
+        virtual void Update(Input& input, float dt) {}
     };
 }
