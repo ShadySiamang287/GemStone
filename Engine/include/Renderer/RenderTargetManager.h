@@ -10,7 +10,7 @@
 namespace GEM{
     class GraphicsContext;
 
-    class RenderTargetManager {
+    class GEM_API RenderTargetManager {
     public:
         explicit RenderTargetManager(GraphicsContext& context);
 

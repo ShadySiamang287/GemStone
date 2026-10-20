@@ -4,7 +4,7 @@
 #include "Renderer/RenderTargetManager.h"
 
 namespace GEM{
-    class RenderPass{
+    class GEM_API RenderPass{
     public:
 
         virtual ~RenderPass() = default;

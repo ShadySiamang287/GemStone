@@ -22,9 +22,6 @@ target_sources(Engine PRIVATE
     src/Graphics/ResourceFactory.cpp
     src/Renderer/RenderTargetManager.cpp
     src/Renderer/Renderer.cpp
-    src/Renderer/RenderPasses/DeferredPass.cpp
-    src/Renderer/RenderPasses/LightingPass.cpp
-    src/Renderer/RenderPasses/ToneMappingPass.cpp
     src/Core/Input.cpp
     src/ImGui/ImGuiContext.cpp
 )
@@ -44,13 +41,13 @@ PUBLIC
     DirectX-Headers
     D3D12MemoryAllocator
     glm::glm
-    imgui
+    WinPixEventRuntime
 PRIVATE
     #directX
+    imgui
     d3d12
     dxgi
     dxguid
-    WinPixEventRuntime
 
 )
 

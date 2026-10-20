@@ -11,12 +11,20 @@ namespace GEM{
     class GraphicsContext;
     class ImGuiContext;
 
-    class Renderer{
+    class GEM_API Renderer{
     public:
         Renderer(GraphicsContext& context, HWND window);
         ~Renderer();
         void Render();
         void Resize(UINT width, UINT height);
+
+        void AddRenderPass(std::unique_ptr<RenderPass> pass) {
+            mRenderPasses.push_back(std::move(pass));
+        }
+
+        ConstantBuffer<FrameData>* GetFrameDataBuffer() const {
+            return mFrameDataBuffer.get();
+        }
 
     private:
         GraphicsContext& mContext;
@@ -28,14 +36,6 @@ namespace GEM{
     
 
         std::vector<std::unique_ptr<RenderPass>> mRenderPasses;
-        //std::unique_ptr<GraphicsPipeline> mDefferedPipeline;
-        // std::unique_ptr<GraphicsPipeline> mLightingPipeline;
-        std::unique_ptr<GraphicsPipeline> mToneMappingPipeline;
-        //std::shared_ptr<RootSignature> mRootSig;
-        //std::shared_ptr<RootSignature> mLightingSig;
-        std::shared_ptr<RootSignature> mFullscreenRootSig;
-        // std::unique_ptr<VertexBuffer> mVertexBuffer;
-        // std::unique_ptr<IndexBuffer> mIndexBuffer;
         FrameData mFrameData;
         std::unique_ptr<ConstantBuffer<FrameData>> mFrameDataBuffer;
         std::vector<Model> mModels;

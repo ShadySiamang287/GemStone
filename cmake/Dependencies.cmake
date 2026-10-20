@@ -46,7 +46,11 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(imgui)
 
-add_library(imgui)
+add_library(imgui SHARED)
+
+set_target_properties(imgui PROPERTIES
+  WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
 
 target_include_directories(imgui
     PUBLIC

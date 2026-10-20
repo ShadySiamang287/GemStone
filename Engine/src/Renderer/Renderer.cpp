@@ -6,9 +6,6 @@
 #include "Graphics/ResourceFactory.h"
 #include "Graphics/GraphicsCommands.h"
 
-#include "Renderer/RenderPasses/DefferedPass.h"
-#include "Renderer/RenderPasses/LightingPass.h"
-#include "Renderer/RenderPasses/ToneMappingPass.h"
 #include "ImGui/ImGuiContext.h"
 
 #include <imgui.h>
@@ -94,9 +91,9 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
     mFrameDataBuffer = ResourceFactory::CreateConstantBuffer<FrameData>();
     mFrameDataBuffer->Upload(mFrameData);
 
-    mRenderPasses.push_back(std::make_unique<DeferredPass>(mFrameDataBuffer.get()));
-    mRenderPasses.push_back(std::make_unique<LightingPass>());
-    mRenderPasses.push_back(std::make_unique<ToneMappingPass>());
+    // mRenderPasses.push_back(std::make_unique<DeferredPass>(mFrameDataBuffer.get()));
+    // mRenderPasses.push_back(std::make_unique<LightingPass>());
+    // mRenderPasses.push_back(std::make_unique<ToneMappingPass>());
 
 
     std::array<Vertex, 4> vertices = {

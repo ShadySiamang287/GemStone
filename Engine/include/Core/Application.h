@@ -6,6 +6,8 @@
 #include "Graphics/GraphicsContext.h"
 #include "Renderer/Renderer.h"
 
+#include "Core/Scene.h"
+
 namespace GEM{
     /// @brief The base version of the application that gets inherited from
     class GEM_API Application {
@@ -19,9 +21,12 @@ namespace GEM{
 		void Run();
 
     private:
-        std::unique_ptr<Window> mWindow;
-        std::unique_ptr<GraphicsContext> mContext;
-        std::unique_ptr<Renderer> mRenderer;
+    std::unique_ptr<Window> mWindow;
+    std::unique_ptr<GraphicsContext> mContext;
+    
+    protected:
+    std::unique_ptr<Renderer> mRenderer;
+    std::unique_ptr<Scene> mScene;
     };
 
     /// @brief This function is used to the instance of the application the program uses

@@ -4,6 +4,10 @@ add_executable(Sandbox WIN32)
 
 target_sources(Sandbox PRIVATE
     src/SandboxApp.cpp
+    src/TestScene.cpp
+    src/RenderPasses/DeferredPass.cpp
+    src/RenderPasses/LightingPass.cpp
+    src/RenderPasses/ToneMappingPass.cpp
 )
 
 target_include_directories(Sandbox PRIVATE ${Sandbox_SOURCE_DIR}/include)
@@ -14,12 +18,13 @@ target_precompile_headers(Sandbox PRIVATE ${Engine_SOURCE_DIR}/include/pch.h)
 target_link_libraries(Sandbox
 PRIVATE
     Engine
+    imgui
 )
 
-add_slang_shader(
+add_hlsl_shader(
     TARGET GemStoneShaders
     NAME TriangleVS
-    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Triangle.slang"
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Deferred.hlsl"
     ENTRY vertMain
     PROFILE vs_6_6
     INCLUDE_DIRS
@@ -27,46 +32,48 @@ add_slang_shader(
     ALL
 )
 
-add_slang_shader(
+add_hlsl_shader(
     TARGET GemStoneShaders
     NAME TrianglePS
-    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Triangle.slang"
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Deferred.hlsl"
     ENTRY fragMain
     PROFILE ps_6_6
     INCLUDE_DIRS
         "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
-add_slang_shader(
+add_hlsl_shader(
     TARGET GemStoneShaders
     NAME FullscreenVS
-    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/FullScreenVert.slang"
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/FullScreenVert.hlsl"
     ENTRY FullscreenVS
     PROFILE vs_6_6
-    INCLUDE_DIRS
-        "${Sandbox_SOURCE_DIR}/Shaders"
-    ALL
+    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
-add_slang_shader(
+add_hlsl_shader(
     TARGET GemStoneShaders
     NAME ToneMappingPS
-    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/ToneMapping.slang"
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/ToneMapping.hlsl"
     ENTRY ToneMappingPS
     PROFILE ps_6_6
-    INCLUDE_DIRS
-        "${Sandbox_SOURCE_DIR}/Shaders"
+    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
-add_slang_shader(
+add_hlsl_shader(
     TARGET GemStoneShaders
     NAME LightingPS
-    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Lighting.slang"
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Lighting.hlsl"
     ENTRY LightingPS
     PROFILE ps_6_6
-    INCLUDE_DIRS
-        "${Sandbox_SOURCE_DIR}/Shaders"
+    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
 
 add_dependencies(Sandbox GemStoneShaders)
+
+add_custom_command(TARGET Sandbox POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:imgui>
+        $<TARGET_FILE_DIR:Sandbox>
+)

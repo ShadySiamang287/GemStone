@@ -3,7 +3,7 @@
 namespace GEM{
     class RootSignature;
 
-    struct ShaderBytecode
+    struct GEM_API ShaderBytecode
     {
         std::vector<std::uint8_t> data;
 
@@ -18,7 +18,7 @@ namespace GEM{
         ShaderBytecode(std::filesystem::path path);
     };
 
-    struct GraphicsPipelineDescription
+    struct GEM_API GraphicsPipelineDescription
     {
         std::wstring name;
         std::shared_ptr<const RootSignature> rootSignature = nullptr;
@@ -39,7 +39,7 @@ namespace GEM{
         bool enableDepth = true;
     };
 
-    class GraphicsPipeline{
+    class GEM_API GraphicsPipeline{
     private:
         GraphicsPipeline() {};
         Microsoft::WRL::ComPtr<ID3D12RootSignature> mRootSignature;

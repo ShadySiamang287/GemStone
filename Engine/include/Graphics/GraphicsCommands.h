@@ -8,7 +8,7 @@ namespace GEM {
 
     /// @brief These are the commands used for issueing commands to the graphics card
     /// @note This all use the graphics context under the hood
-    class GraphicsCommands{
+    class GEM_API GraphicsCommands{
     public:
         /// @brief This is used to register the instance of the graphic context
         /// @param context The context to register

@@ -18,7 +18,7 @@ namespace GEM{
 
     /// @brief This is the resource factory used to create graphics objects
     /// @note This all use the graphics context under the hood
-    class ResourceFactory{
+    class GEM_API ResourceFactory{
     public:
         /// @brief This is used to register the instance of the graphic context
         /// @param context The context to register
