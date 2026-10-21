@@ -9,9 +9,9 @@ This is a DirectX 12 test engine im developing that uses slang shaders. It compi
 - [GLM](https://github.com/g-truc/glm)
 - [DirectX Headers](https://github.com/microsoft/DirectX-Headers)
 - [DirectX12 Memory Allocator](https://github.com/GPUOpen-LibrariesAndSDKs/D3D12MemoryAllocator)
-- [Slang](https://github.com/shader-slang/slang)
+- DXC
 ### Installation
-CMake automatically gathers and installs all dependencies **except slang**, so just run build on either Debug or Build after installing slangc
+CMake automatically gathers and installs all dependencies assuming you have DXC on path, so just run build on either Debug or Build
 
 ## Documentation
 [Read the GemStone API documentation](https://shadysiamang287.github.io/GemStone/)
