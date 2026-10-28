@@ -1,3 +1,5 @@
+#include "common.hlsli"
+
 Texture2D SceneTexture : register(t0);
 SamplerState LinearSampler : register(s0);
 
@@ -12,11 +14,6 @@ cbuffer Data : register(b0)
     float hableValue;
     uint type;
 }
-
-struct VSInput {
-    float4 position : SV_Position;
-    float2 uv : TEXCOORD0;
-};
 
 float3 ReinhardLuminance(float3 color)
 {
@@ -96,7 +93,7 @@ float3 agx(float3 colour) {
     return colour;
 }
 
-float4 ToneMappingPS(VSInput input) : SV_Target {
+float4 ToneMappingPS(FullScreenVertOut input) : SV_Target {
     float3 hdrColor = SceneTexture.Sample(LinearSampler, input.uv).rgb;
     float3 combinedColour = hdrColor * exposure;
 

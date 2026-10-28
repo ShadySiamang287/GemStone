@@ -35,8 +35,10 @@ namespace GEM{
             DXGI_FORMAT_R8G8B8A8_UNORM
         };
 
+        D3D12_PRIMITIVE_TOPOLOGY_TYPE topologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         D3D12_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
         bool enableDepth = true;
+        bool wireframe = false;
     };
 
     class GEM_API GraphicsPipeline{

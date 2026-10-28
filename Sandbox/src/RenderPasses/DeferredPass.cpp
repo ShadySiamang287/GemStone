@@ -10,7 +10,7 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
 
     D3D12_ROOT_PARAMETER frameDataParameter {};
     frameDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    frameDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
+    frameDataParameter.ShaderVisibility = static_cast<D3D12_SHADER_VISIBILITY>(D3D12_SHADER_VISIBILITY_VERTEX & D3D12_SHADER_VISIBILITY_DOMAIN & D3D12_SHADER_VISIBILITY_HULL);
 
     frameDataParameter.Descriptor.ShaderRegister = 0; // b0
     frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
@@ -28,12 +28,16 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
     desc.inputElements = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
         {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
     };
     desc.renderTargetFormats = {DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_R8G8B8A8_UNORM};
     desc.vertexShader = {"Shaders/TriangleVS.dxil"};
     desc.pixelShader = {"Shaders/TrianglePS.dxil"};
+    desc.hullShader = {"Shaders/PlanetHS.dxil"};
+    desc.domainShader = {"Shaders/PlanetDS.dxil"};
+    desc.topologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
+    desc.topology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
     desc.enableDepth = true;
+    desc.wireframe = false;
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
 
     mClearColour = {

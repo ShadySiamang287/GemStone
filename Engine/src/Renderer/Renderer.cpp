@@ -10,6 +10,8 @@
 
 #include <imgui.h>
 
+#include "Core/Scene.h"
+
 #include "pix3.h"
 
 using namespace GEM;
@@ -84,26 +86,6 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
 
     mFrameDataBuffer = ResourceFactory::CreateConstantBuffer<FrameData>();
     mFrameDataBuffer->Upload(mFrameData);
-
-
-    std::array<Vertex, 4> vertices = {
-        Vertex{{-0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f, 1.f}},
-        Vertex{{0.5f, 0.5f, 0.f}, {0.f, 0.f, 1.f},{1.f, 1.f, 1.f, 1.f}},
-        Vertex{{-0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f, 1.f}},
-        Vertex{{0.5f, -0.5f, 0.f}, {0.f, 0.f, 1.f}, {1.f, 1.f, 1.f, 1.f}},
-    };
-    
-    std::array<uint32_t, 6> indices = {
-        0, 1, 2,
-        1, 3, 2
-    };
-
-    Model model;
-    model.primitives.push_back({
-        ResourceFactory::CreateVertexBuffer(vertices),
-        ResourceFactory::CreateIndexBuffer(indices)
-    });
-    mModels.push_back(std::move(model));
 }
 
 Renderer::~Renderer() = default;
@@ -134,8 +116,10 @@ void Renderer::Render(Scene* scene) {
     mImGuiContext->BeginFrame();
     mFrameDataBuffer->Upload(mFrameData);
 
+    auto models = scene->GetModels();
+
     for (auto& pass : mRenderPasses) {
-        pass->Render(*mRenderTargetsPtr.get(), mModels);
+        pass->Render(*mRenderTargetsPtr.get(), models);
     }
 
     for (auto& pass : mRenderPasses){
@@ -144,7 +128,7 @@ void Renderer::Render(Scene* scene) {
 
     ImGui::Begin("GemStone");
     ImGui::Text("Renderer online");
-    ImGui::Text("Models: %zu", mModels.size());
+    ImGui::Text("Models: %zu", models.size());
     ImGui::End();
 
     mImGuiContext->Render(GraphicsCommands::GetCommandList());

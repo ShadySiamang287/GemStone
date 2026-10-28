@@ -1,9 +1,6 @@
-struct VSOutput {
-    float4 position : SV_Position;
-    float2 uv : TEXCOORD0;
-};
+#include "common.hlsli"
 
-VSOutput FullscreenVS(uint vertexId : SV_VertexID) {
+FullScreenVertOut FullscreenVS(uint vertexId : SV_VertexID) {
     static const float2 positions[3] = {
         float2(-1.0, -1.0),
         float2(-1.0,  3.0),
@@ -16,7 +13,7 @@ VSOutput FullscreenVS(uint vertexId : SV_VertexID) {
         float2(2.0, 1.0)
     };
 
-    VSOutput output;
+    FullScreenVertOut output;
     output.position = float4(positions[vertexId], 0.0, 1.0);
     output.uv = uvs[vertexId];
     return output;

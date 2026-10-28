@@ -49,6 +49,9 @@ std::unique_ptr<GraphicsPipeline> ResourceFactory::CreateGraphicsPipeline(const 
 
 	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 	state.RasterizerState.FrontCounterClockwise = false;
+	if (desc.wireframe) {
+		state.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+	}
 
 	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
@@ -71,7 +74,7 @@ std::unique_ptr<GraphicsPipeline> ResourceFactory::CreateGraphicsPipeline(const 
 
 	state.SampleMask = UINT_MAX;
 
-	state.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	state.PrimitiveTopologyType = desc.topologyType;
 
 	state.NumRenderTargets = static_cast<UINT>(desc.renderTargetFormats.size());
 	for (int i = 0; i < desc.renderTargetFormats.size(); i++) {
@@ -81,7 +84,7 @@ std::unique_ptr<GraphicsPipeline> ResourceFactory::CreateGraphicsPipeline(const 
 	state.SampleDesc.Count = 1;
 	THROW_IF_FAILED(sContextPtr->mDevice->CreateGraphicsPipelineState(&state, IID_PPV_ARGS(&pipeline->mPipelineState)));
 	THROW_IF_FAILED(pipeline->mPipelineState->SetName(desc.name.c_str()));
-
+	pipeline->mTopology = desc.topology;
 	return std::unique_ptr<GraphicsPipeline>(pipeline);
 }
 

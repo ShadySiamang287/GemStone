@@ -43,7 +43,6 @@ namespace GEM{
         std::vector<std::unique_ptr<RenderPass>> mRenderPasses;
         FrameData mFrameData;
         std::unique_ptr<ConstantBuffer<FrameData>> mFrameDataBuffer;
-        std::vector<Model> mModels;
         std::unique_ptr<ImGuiContext> mImGuiContext;
     
     };

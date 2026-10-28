@@ -6,7 +6,6 @@ namespace GEM{
     struct Vertex{
         glm::vec3 position;
         glm::vec3 normal;
-        glm::vec4 colour;
     };
 
     struct FrameData {

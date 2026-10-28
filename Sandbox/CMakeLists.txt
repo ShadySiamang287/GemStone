@@ -70,6 +70,24 @@ add_hlsl_shader(
     INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
+add_hlsl_shader(
+    TARGET GemStoneShaders
+    NAME PlanetHS
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/planetHullShader.hlsl"
+    ENTRY PlanetHullShader
+    PROFILE hs_6_6
+    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
+add_hlsl_shader(
+    TARGET GemStoneShaders
+    NAME PlanetDS
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/PlanetDomain.hlsl"
+    ENTRY PlanetDS
+    PROFILE ds_6_6
+    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
 
 add_dependencies(Sandbox GemStoneShaders)
 
