@@ -13,6 +13,7 @@ struct FragOut {
 FragOut LightingPS(FullScreenVertOut input) {
     FragOut output;
     float4 colour = albedo.Sample(LinearSampler, input.uv);
+    float4 normalSample = normal.Sample(LinearSampler, input.uv);
     float brightness = dot(colour.rgb, float3(0.2126, 0.7152, 0.0722));
     if (brightness > 1.0f) {
         output.brightness = float4(colour.rgb, 1.0f);

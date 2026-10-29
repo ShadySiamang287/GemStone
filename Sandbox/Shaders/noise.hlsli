@@ -116,18 +116,18 @@ NoiseResult SimplexNoiseWithGradient(float3 v){
 	return result;
 }
 
-NoiseResult FractalNoise(float3 position, float frequency, float amplitude) {
+NoiseResult FractalNoise(float3 position, float baseRoughness, float persistence) {
 	NoiseResult result;
     result.value = 0.0f;
-    float curFrequency = frequency;
-    float curAmplitude = amplitude;
-
+    float curFrequency = baseRoughness;
+    float curAmplitude = 1.0f;
+    
     for (int i = 0; i < 5; i++) {
 		NoiseResult octave = SimplexNoiseWithGradient(position * curFrequency);
         result.value += octave.value * curAmplitude;
 		result.gradient += octave.gradient * curFrequency * curAmplitude;
-        curFrequency *= 2.0f;
-        curAmplitude *= 0.5f;
+        curFrequency *= baseRoughness;
+        curAmplitude *= persistence;
     }
     return result;
 }

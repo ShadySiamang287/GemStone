@@ -14,15 +14,20 @@ struct PatchTess {
     float InsideTess : SV_InsideTessFactor;
 };
 
-static const float maxTess = 8.0f;
-static const float nearDist = 15.0f;
-static const float farDist = 60.0f;
 
 cbuffer FrameData : register(b0)
 {
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
 }
+
+cbuffer TessellationData : register(b2)
+{
+    float maxTess;
+    float nearDist;
+    float farDist;
+};
+
 
 float CalcTessFactor(float3 a, float3 b)
 {

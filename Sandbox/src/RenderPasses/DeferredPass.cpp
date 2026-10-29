@@ -2,6 +2,7 @@
 
 #include "Graphics/GraphicsCommands.h"
 #include "pix3.h"
+#include "imgui.h"
 
 using namespace GEM;
 
@@ -15,15 +16,36 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
     frameDataParameter.Descriptor.ShaderRegister = 0; // b0
     frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
 
+    D3D12_ROOT_PARAMETER planetDataParameter{};
+	planetDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    planetDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN;
+    planetDataParameter.Descriptor.RegisterSpace = 0;
+	planetDataParameter.Descriptor.ShaderRegister = 1;
+
+    D3D12_ROOT_PARAMETER tessDataParameter{};
+    tessDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    tessDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_HULL;
+    tessDataParameter.Descriptor.RegisterSpace = 0;
+    tessDataParameter.Descriptor.ShaderRegister = 2;
+
     RootSignatureDesc rootDesc;
     rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
     rootDesc.parameters.push_back(frameDataParameter);
-    rootDesc.name = L"Deferred Root Signature";
+	rootDesc.parameters.push_back(planetDataParameter);
+	rootDesc.parameters.push_back(tessDataParameter);
+
+    rootDesc.name = L"Planet Root Signature";
     
     mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
+    
+    mPlanetDataBuffer = ResourceFactory::CreateConstantBuffer<PlanetData>();
+    mPlanetDataBuffer->Upload(mPlanetData);
+
+	mTesselationDataBuffer = ResourceFactory::CreateConstantBuffer<TesselationData>();
+	mTesselationDataBuffer->Upload(mTesselationData);
 
     GraphicsPipelineDescription desc;
-    desc.name = L"Deferred Pipeline";
+    desc.name = L"Planet Pipeline";
     desc.rootSignature = mRootSig;
     desc.inputElements = {
         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -51,7 +73,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     auto* normalTarget = manager.GetRenderTarget(L"Normal GBuffer");
     auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
 
-    GraphicsCommands::BeginLabel(PIX_COLOR(255, 128, 0), "forward pass");
+    GraphicsCommands::BeginLabel(PIX_COLOR(255, 128, 0), "Planet pass");
 
     GraphicsCommands::TransitionRTV(
         *colourTarget,
@@ -82,6 +104,8 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
 
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
     GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
+	GraphicsCommands::SetConstantBufferView(1, mPlanetDataBuffer->GetAddress());
+	GraphicsCommands::SetConstantBufferView(2, mTesselationDataBuffer->GetAddress());
     GraphicsCommands::BindViewport(
         0.f,
         0.f,
@@ -105,4 +129,22 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     }
 
     GraphicsCommands::EndLabel();
+}
+
+void DeferredPass::OnImGuiRender() {
+    ImGui::Begin("Planet Pass");
+    ImGui::SeparatorText("Planet Generation Settings");
+    ImGui::SliderFloat("Radius", &mPlanetData.radius, 0.1f, 100.f);
+    ImGui::SliderFloat("Roughness", &mPlanetData.roughness, 0.0f, 10.f);
+    ImGui::SliderFloat("Persistence", &mPlanetData.persistence, 0.0f, 10.f);
+    ImGui::SliderFloat("Terrain Strength", &mPlanetData.terrainStrength, 0.0f, 10.f);
+    mPlanetDataBuffer->Upload(mPlanetData);
+
+    ImGui::SeparatorText("Tesselation Settings");
+	ImGui::SliderFloat("Max Tesselation", &mTesselationData.maxTess, 1.f, 64.f);
+	ImGui::SliderFloat("Near Distance", &mTesselationData.nearDist, 1.f, 100.f);
+	ImGui::SliderFloat("Far Distance", &mTesselationData.farDist, 1.f, 100.f);
+
+	mTesselationDataBuffer->Upload(mTesselationData);
+    ImGui::End();
 }
