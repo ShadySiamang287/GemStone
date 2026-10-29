@@ -136,6 +136,7 @@ void DeferredPass::OnImGuiRender() {
     ImGui::SeparatorText("Planet Generation Settings");
     ImGui::SliderFloat("Radius", &mPlanetData.radius, 0.1f, 100.f);
     ImGui::SliderFloat("Roughness", &mPlanetData.roughness, 0.0f, 10.f);
+    ImGui::SliderFloat("Riged Roughness", &mPlanetData.rigedRoughness, 0.f, 10.f);
     ImGui::SliderFloat("Persistence", &mPlanetData.persistence, 0.0f, 10.f);
     ImGui::SliderFloat("Terrain Strength", &mPlanetData.terrainStrength, 0.0f, 10.f);
     mPlanetDataBuffer->Upload(mPlanetData);

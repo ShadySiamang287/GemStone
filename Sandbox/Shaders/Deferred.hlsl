@@ -3,15 +3,11 @@
 struct VertexInput {
     float3 position : POSITION;
     float3 normal : NORMAL;
-    // float4 colour : COLOR0;
 };
 
 struct VertexOutput {
     float3 position : POSITION;
     float3 normal : NORMAL;
-
-    // float terrainHeight : TEXCOORD0;
-    // float3 direction : TEXCOORD1;
 };
 
 cbuffer FrameData : register(b0)
@@ -20,27 +16,12 @@ cbuffer FrameData : register(b0)
     float4x4 ProjectionMatrix;
 }
 
-static const float radius = 10.f;
-static const float amplitude = 0.5f;
-static const float frequency = 4.0f;
-static const float seed = 0.0f;
-static const float terrainStrength = 2.0f;
-
 VertexOutput vertMain(VertexInput input) {
     VertexOutput output;
 
-    // float3 direction = normalize(input.position);
-    // float noiseValue = FractalNoise(direction, frequency, amplitude);
-
-    // float displacedRadius = radius + noiseValue * terrainStrength;
-    // float3 displacedPosition = direction * displacedRadius;
-    // float terrainHeight = saturate(noiseValue * 0.5f + 0.5f);
-
     output.position = input.position;
-    //output.sv_position = mul(ProjectionMatrix, mul(ViewMatrix, float4(displacedPosition, 1.0)));
     output.normal = input.normal;
-    // output.terrainHeight = terrainHeight;
-    // output.direction = direction;
+
     return output;
 }
 
@@ -60,50 +41,62 @@ struct VertexOutDS {
 FragOut fragMain(VertexOutDS inVert)
 {
     float height = inVert.terrainHeight;
+    const float seaLevel = 0.34f;
 
     float3 normal = normalize(inVert.normal);
-    float3 up = float3(0.0f, 1.0f, 0.0f);
-
-    // float slope = 1.0f - abs(dot(normal, up));
+    float3 up = float3(inVert.direction);
+        
+    float slope = 1.0f - abs(dot(normal, up));
     float latitude = abs(inVert.direction.y);
 
-    float landMask = smoothstep(0.35f, 0.42f, height);
+    float n = SimplexNoise(up * 40.0f) - 0.5f;
+    float h = height + n * 0.03f;
+    float s = slope  + n * 0.10f;
 
-    float grassMask = smoothstep(0.42f, 0.55f, height);
 
-    float rockHeightMask = smoothstep(0.58f, 0.72f, height);
+    float landMask  = smoothstep(0.15f, 0.23f, height);
+    float grassMask = smoothstep(0.25f, 0.8f, height);
 
-    float steepRockMask = smoothstep(0.35f, 0.75f, height);
+    float rockHeightMask = smoothstep(0.8f, 0.85f, height);
+    float steepRockMask  = smoothstep(0.55f, 0.65f, slope);
+    float finalRock      = smoothstep(0.75f, 0.90f, slope);
 
-    float coldLatitudeMask = smoothstep(0.55f, 0.90f, latitude);
+    float coldLatitudeMask = smoothstep(0.75f, 0.92f, latitude);
+    float highAltitudeSnow = smoothstep(0.85f, 0.95f, height);
+    float snowMask         = max(highAltitudeSnow, coldLatitudeMask);
 
-    float snowMask = max(rockHeightMask, coldLatitudeMask);
+    float dirtMask = smoothstep(0.55f, 0.72f, height) * (1.0f - finalRock);
+    
+    // Define Biome Colours
+    float3 oceanColor = float3(0.02f, 0.15f, 0.45f);
+    float3 sandColor  = float3(0.75f, 0.62f, 0.35f);
+    float3 grassColor = float3(0.15f, 0.52f, 0.18f);
+    float3 rockColor  = float3(0.42f, 0.42f, 0.46f); // Cool grey/slate
+    float3 snowColor  = float3(0.95f, 0.95f, 1.0f);
+    float3 dirtColor = float3(0.50f, 0.38f, 0.25f);
 
-    float3 colour = float3(0.02f, 0.15f, 0.45f); // ocean
+    // Masks (all relative to sea level)
+    float beach = 1.0f - smoothstep(seaLevel + 0.01f, seaLevel + 0.06f, h);
+    float grass = smoothstep(seaLevel + 0.03f, seaLevel + 0.12f, h);
+    float dirt  = smoothstep(0.55f, 0.72f, h);
+    float rock  = max(smoothstep(0.55f, 0.75f, s), smoothstep(0.80f, 0.90f, h));
+    float snow  = max(smoothstep(0.85f, 0.95f, h),
+                      smoothstep(0.75f, 0.92f, latitude + n * 0.1f));
+    snow *= 1.0f - smoothstep(0.45f, 0.65f, s); 
 
-    colour = lerp(
-        colour,
-        float3(0.75f, 0.62f, 0.35f), // sand
-        landMask
-    );
+    float3 land = grassColor;
+    land = lerp(land, dirtColor, dirt * (1.0f - rock));
+    land = lerp(land, rockColor, rock);
+    land = lerp(land, snowColor, snow);
+    land = lerp(land, sandColor, beach);
+    
+    float depth = saturate((seaLevel - height) / 0.2f);
+    float3 water = lerp(float3(0.05, 0.45, 0.55), float3(0.01, 0.06, 0.25), sqrt(depth));
 
-    colour = lerp(
-        colour,
-        float3(0.12f, 0.42f, 0.12f), // grass
-        grassMask
-    );
+    float isLand = smoothstep(seaLevel - 0.005f, seaLevel + 0.005f, height);
+    float3 colour = lerp(water, land, isLand);
 
-    colour = lerp(
-        colour,
-        float3(0.30f, 0.28f, 0.24f), // rock
-        max(steepRockMask, rockHeightMask)
-    );
-
-    colour = lerp(
-        colour,
-        float3(0.95f, 0.95f, 1.0f), // snow
-        snowMask
-    );
+    colour *= lerp(0.7f, 1.0f, pow(saturate(dot(normal, up)), 2.0f));
 
     FragOut output;
 

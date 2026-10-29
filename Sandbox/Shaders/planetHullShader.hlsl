@@ -1,10 +1,4 @@
-
 struct VertexOut {
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-};
-
-struct HullOut {
     float3 position : POSITION;
     float3 normal : NORMAL;
 };
@@ -54,8 +48,8 @@ PatchTess PatchConstantFunc(InputPatch<VertexOut, 3> patch, uint patchID: SV_Pri
 [outputtopology("triangle_cw")]
 [outputcontrolpoints(3)]
 [patchconstantfunc("PatchConstantFunc")]
-HullOut PlanetHullShader(InputPatch<VertexOut, 3> patch, uint i : SV_OutputControlPointID, uint patchID : SV_PrimitiveID) {
-    HullOut hOut;
+VertexOut PlanetHullShader(InputPatch<VertexOut, 3> patch, uint i: SV_OutputControlPointID, uint patchID: SV_PrimitiveID) {
+    VertexOut hOut;
     hOut.position = patch[i].position;
     hOut.normal = patch[i].normal;
     return hOut;

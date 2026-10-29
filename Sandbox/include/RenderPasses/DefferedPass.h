@@ -8,9 +8,10 @@ using namespace GEM;
 
 struct PlanetData {
     float radius = 10.f;
-    float roughness = 2.5f;
-    float persistence = 0.4f;
-    float terrainStrength = 1.5f;
+    float roughness = 0.4f;
+    float rigedRoughness = 0.8f;
+    float persistence = 0.425f;
+    float terrainStrength = 0.3f;
 };
 
 struct TesselationData {

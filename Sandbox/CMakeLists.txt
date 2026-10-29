@@ -39,8 +39,7 @@ add_hlsl_shader(
     SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Deferred.hlsl"
     ENTRY fragMain
     PROFILE ps_6_6
-    INCLUDE_DIRS
-        "${Sandbox_SOURCE_DIR}/Shaders"
+    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
 add_hlsl_shader(

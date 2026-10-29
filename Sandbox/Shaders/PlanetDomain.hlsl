@@ -28,41 +28,45 @@ cbuffer PlanetData : register(b1)
 {
     float radius;
     float roughness;
+    float ridgeRoughness;
     float persistence;
     float terrainStrength;
 }
 
+float3 SurfacePoint(float3 dir)
+{
+    // Must be the same expression your vertex displacement uses.
+    return dir * (1.0f + FractalNoise(dir, roughness, ridgeRoughness, persistence));
+}
+
 float3 CalculateNormal(float3 position)
 {
-    const float eps = 0.001f;
-    const float2 h = float2(eps, 0.0f);
-    
-    return normalize(float3(
-        FractalNoise(position + h.xyy, roughness, persistence).value - FractalNoise(position - h.xyy, roughness, persistence).value,
-        FractalNoise(position + h.yxy, roughness, persistence).value - FractalNoise(position - h.yxy, roughness, persistence).value,
-        FractalNoise(position + h.yyx, roughness, persistence).value - FractalNoise(position - h.yyx, roughness, persistence).value
-    ));
-    
-    //return normalize(float3(FractalNoise(position - h.xyy, frequency, amplitude).value - FractalNoise(position + h.xyy, frequency, amplitude).value,
-    //                        FractalNoise(position - h.yxy, frequency, amplitude).value - FractalNoise(position + h.yxy, frequency, amplitude).value,
-    //                        FractalNoise(position - h.yyx, frequency, amplitude).value - FractalNoise(position + h.yyx, frequency, amplitude).value));
-    //const float h = 0.0001;
-    //const float2 k = float2(1, -1);
-    
-    //return normalize(
-    //    k.xyy * FractalNoise(position + k.xyy * h, frequency, amplitude).value +
-    //    k.yyx * FractalNoise(position + k.yyx * h, frequency, amplitude).value +
-    //    k.yxy * FractalNoise(position + k.yxy * h, frequency, amplitude).value +
-    //    k.xxx * FractalNoise(position + k.xxx * h, frequency, amplitude).value
-    //);
-    
-    //const float eps = 0.0001f;
-    //const float2 h = float2(eps, 0.0f);
-    //return normalize(float3(
-    //    FractalNoise(position + h.xyy, frequency, amplitude).value - FractalNoise(position - h.xyy, frequency, amplitude).value,
-    //    FractalNoise(position + h.yxy, frequency, amplitude).value - FractalNoise(position - h.yxy, frequency, amplitude).value,
-    //    FractalNoise(position + h.yyx, frequency, amplitude).value - FractalNoise(position - h.yyx, frequency, amplitude).value
-    //));
+    const float eps = 0.01f;
+
+    float3 dir = normalize(position);
+    float3 up = abs(dir.y) < 0.99f ? float3(0, 1, 0) : float3(1, 0, 0);
+    float3 T = normalize(cross(up, dir));
+    float3 B = cross(dir, T);
+
+    float3 p0 = SurfacePoint(dir);
+    float3 pT = SurfacePoint(normalize(dir + T * eps));
+    float3 pB = SurfacePoint(normalize(dir + B * eps));
+
+    return normalize(cross(pT - p0, pB - p0));
+}
+
+float ShapeTerrain(float rawHeight) {
+    float oceanMask = smoothstep(-0.4f, 0.0f, rawHeight);
+    float mountainMask = smoothstep(0.2f, 0.6f, rawHeight);
+
+    float oceanVal = rawHeight * 1.4f;
+    float plainsVal = rawHeight * 0.7f;
+    float mountainVal = 0.14f + pow(max(rawHeight - 0.2f, 0.0f), 1.4f) * 2.2f;
+
+    float heightOutput = lerp(oceanVal, plainsVal, oceanMask);
+    heightOutput = lerp(heightOutput, mountainVal, mountainMask);
+
+    return heightOutput;
 }
 
 [domain("tri")]
@@ -72,19 +76,17 @@ VertexOutDS PlanetDS(PatchTess patchTress, float3 bary: SV_DomainLocation, const
     float3 posL = bary.x * tri[0].PosL + bary.y * tri[1].PosL + bary.z * tri[2].PosL;
     float3 normal = bary.x * tri[0].normal + bary.y * tri[1].normal + bary.z * tri[2].normal;
     float3 direction = normalize(posL);
-    NoiseResult noise = FractalNoise(direction, roughness, persistence);
+    float noise = FractalNoise(direction, roughness, ridgeRoughness, persistence);
     
-    float totalNoise = noise.value * terrainStrength;
+    float totalNoise = ShapeTerrain(noise) * terrainStrength;
     
     float displacedRadius = radius + totalNoise;
     float3 displacedPosition = posL * displacedRadius;
-    
-    float3 radiusGradient = noise.gradient * terrainStrength;
-    float3 surfaceGradient = radiusGradient - direction * dot(radiusGradient, direction);
+
 
     dOut.position = mul(ProjectionMatrix, mul(ViewMatrix, float4(displacedPosition, 1.0)));
     dOut.normal = CalculateNormal(displacedPosition);
-    dOut.terrainHeight = saturate(noise.value * 0.5f + 0.5f);
+    dOut.terrainHeight = saturate(noise);
     dOut.direction = direction;
     return dOut;
 }

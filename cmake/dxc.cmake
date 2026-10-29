@@ -47,6 +47,8 @@ function(add_hlsl_shader)
             -E "${ARG_ENTRY}"
             ${ARG_OPTIONS}
             -Fo "${output}"
+            -Zi
+            -Qembed_debug
 
         DEPENDS
             "${ARG_SOURCE}"

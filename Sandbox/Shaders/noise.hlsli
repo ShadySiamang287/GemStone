@@ -15,13 +15,7 @@ float4 taylorInvSqrt(float4 r){
     return float4( taylorInvSqrt(r.x), taylorInvSqrt(r.y), taylorInvSqrt(r.z), taylorInvSqrt(r.w) );
 }
 
-struct NoiseResult {
-	float value;
-	float3 gradient;
-};
-
-NoiseResult SimplexNoiseWithGradient(float3 v){ 
-	NoiseResult result;
+float SimplexNoise(float3 v){ 
   	const float2  C = float2(1.0/6.0, 1.0/3.0) ;
   	const float4  D = float4(0.0, 0.5, 1.0, 2.0);
 
@@ -104,30 +98,51 @@ NoiseResult SimplexNoiseWithGradient(float3 v){
 	float4 t3 = t2 * t;
 	float4 t4 = t2 * t2;
 
-
-	result.value = 42.0f * dot(t4, cornerValue);
-
-	result.gradient = 42.0f * (
-		t4.x * p0 - 8.0f * t3.x * cornerValue.x * x0
-		+ t4.y * p1 - 8.0f * t3.y * cornerValue.y * x1
-		+ t4.z * p2 - 8.0f * t3.z * cornerValue.z * x2
-		+ t4.w * p3 - 8.0f * t3.w * cornerValue.w * x3
-	);
-	return result;
+	return 42.0f * dot(t4, cornerValue);;
 }
 
-NoiseResult FractalNoise(float3 position, float baseRoughness, float persistence) {
-	NoiseResult result;
-    result.value = 0.0f;
-    float curFrequency = baseRoughness;
-    float curAmplitude = 1.0f;
-    
-    for (int i = 0; i < 5; i++) {
-		NoiseResult octave = SimplexNoiseWithGradient(position * curFrequency);
-        result.value += octave.value * curAmplitude;
-		result.gradient += octave.gradient * curFrequency * curAmplitude;
-        curFrequency *= baseRoughness;
-        curAmplitude *= persistence;
+float FractalNoise(float3 position, float baseFrequency, float ridgedRoughness, float persistence) {
+    float baseValue = 0.0f;
+
+    float frequency = baseFrequency;
+    float amplitude = 1.0f;
+    float amplitudeSum = 0.0f;
+
+    for (int i = 0; i < 5; ++i)
+    {
+        float noise = SimplexNoise(position * frequency);
+        baseValue += noise * amplitude;
+
+        amplitudeSum += amplitude;
+
+        frequency *= 2.0f;
+        amplitude *= persistence;
     }
-    return result;
+
+	baseValue /= amplitudeSum;
+
+    float ridged = 0.0f;
+	float ridgeFreq = ridgedRoughness;
+	float ridgeAmp = 1.f;
+	float ridgeAmpSum = 0.0f;
+
+	for (int j = 0; j < 4; j++) {
+		float noise = SimplexNoise(position * ridgeFreq);
+        float ridge = 1.0f - abs(noise);
+        ridge = pow(ridge, 3.0f); // Keeps peaks sharp
+        ridged += ridge * ridgeAmp;
+        
+        ridgeAmpSum += ridgeAmp;
+        ridgeFreq *= 2.0f;
+        ridgeAmp *= persistence;
+	}
+
+    if (ridgeAmpSum > 0.0f) {
+        ridged /= ridgeAmpSum;
+    }
+
+	baseValue = sign(baseValue) * pow(abs(baseValue), 1.3f);
+    float mountainMask = smoothstep(-0.15f, 0.25f, baseValue);
+
+    return baseValue + (ridged * mountainMask * 1.5f);
 }
