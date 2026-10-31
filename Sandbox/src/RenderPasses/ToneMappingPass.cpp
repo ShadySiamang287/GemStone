@@ -66,7 +66,8 @@ ToneMappingPass::ToneMappingPass() {
     toneMappingDesc.vertexShader = {"Shaders/FullscreenVS.dxil"};
     toneMappingDesc.pixelShader = {"Shaders/ToneMappingPS.dxil"};
     toneMappingDesc.renderTargetFormats = {DXGI_FORMAT_R8G8B8A8_UNORM_SRGB};
-    toneMappingDesc.enableDepth = false;
+    toneMappingDesc.depthTest = false;
+    toneMappingDesc.depthWrite = false;
 
     mPipeline = ResourceFactory::CreateGraphicsPipeline(toneMappingDesc);
 

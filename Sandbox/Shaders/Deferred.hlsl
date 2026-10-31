@@ -14,6 +14,8 @@ cbuffer FrameData : register(b0)
 {
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
+    float4x4 invViewMatrix;
+    float4x4 invProjectionMatrix;
 }
 
 VertexOutput vertMain(VertexInput input) {

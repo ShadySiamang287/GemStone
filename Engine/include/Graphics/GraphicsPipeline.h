@@ -18,6 +18,12 @@ namespace GEM{
         ShaderBytecode(std::filesystem::path path);
     };
 
+    enum class FaceCulling {
+        NONE = 1,
+        FRONT = 2,
+        BACK = 3
+    };
+
     struct GEM_API GraphicsPipelineDescription
     {
         std::wstring name;
@@ -37,7 +43,10 @@ namespace GEM{
 
         D3D12_PRIMITIVE_TOPOLOGY_TYPE topologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         D3D12_PRIMITIVE_TOPOLOGY topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-        bool enableDepth = true;
+        FaceCulling culling = FaceCulling::BACK;
+        bool transparency = false;
+        bool depthTest = true;
+        bool depthWrite = true;
         bool wireframe = false;
     };
 

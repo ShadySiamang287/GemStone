@@ -75,7 +75,8 @@ LightingPass::LightingPass() {
     lightingDesc.vertexShader = { "Shaders/FullscreenVS.dxil" };
     lightingDesc.pixelShader = { "Shaders/LightingPS.dxil" };
     lightingDesc.renderTargetFormats = { DXGI_FORMAT_R16G16B16A16_FLOAT,DXGI_FORMAT_R16G16B16A16_FLOAT };
-    lightingDesc.enableDepth = false;
+    lightingDesc.depthTest = false;
+    lightingDesc.depthWrite = false;
 
     mPipeline = ResourceFactory::CreateGraphicsPipeline(lightingDesc);
 

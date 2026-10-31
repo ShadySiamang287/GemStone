@@ -58,7 +58,6 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
     desc.domainShader = {"Shaders/PlanetDS.dxil"};
     desc.topologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
     desc.topology = D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST;
-    desc.enableDepth = true;
     desc.wireframe = false;
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
 

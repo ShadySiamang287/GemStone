@@ -83,6 +83,7 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
         0.1f,      // near plane
         1000.0f    // far plane
     );
+    mFrameData.inverseProjMat = glm::inverse(mFrameData.ProjectionMatrix);
 
     mFrameDataBuffer = ResourceFactory::CreateConstantBuffer<FrameData>();
     mFrameDataBuffer->Upload(mFrameData);
@@ -108,6 +109,7 @@ void Renderer::Resize(UINT width, UINT height) {
         0.1f,
         1000.0f
     );
+    mFrameData.inverseProjMat = glm::inverse(mFrameData.ProjectionMatrix);
     mFrameDataBuffer->Upload(mFrameData);
 }
 

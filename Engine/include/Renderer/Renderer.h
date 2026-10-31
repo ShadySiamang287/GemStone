@@ -29,6 +29,7 @@ namespace GEM{
 
         void SetCameraMatrix(glm::mat4 matrix) {
             mFrameData.ViewMatrix = matrix;
+            mFrameData.inverseViewMatrix = glm::inverse(matrix);
         }
 
     private:

@@ -48,24 +48,49 @@ std::unique_ptr<GraphicsPipeline> ResourceFactory::CreateGraphicsPipeline(const 
 	};
 
 	state.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+	
+	state.RasterizerState.CullMode = static_cast<D3D12_CULL_MODE>(desc.culling);
 	state.RasterizerState.FrontCounterClockwise = false;
 	if (desc.wireframe) {
 		state.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
 	}
 
-	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 
-	if (desc.enableDepth) {
-		state.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+	auto& ds = state.DepthStencilState;
+	ds.StencilEnable = FALSE;
 
-		state.DepthStencilState.DepthEnable = TRUE;
-		state.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-
+	if (desc.depthTest || desc.depthWrite) {
+		ds.DepthEnable = TRUE;
+		ds.DepthWriteMask = desc.depthWrite ? D3D12_DEPTH_WRITE_MASK_ALL
+											: D3D12_DEPTH_WRITE_MASK_ZERO;
+		ds.DepthFunc = desc.depthTest ? D3D12_COMPARISON_FUNC_LESS_EQUAL
+										: D3D12_COMPARISON_FUNC_ALWAYS;
 		state.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+	} else {
+		ds.DepthEnable  = FALSE;
+		state.DSVFormat = DXGI_FORMAT_D32_FLOAT; // see note below
 	}
-	else {
-		state.DepthStencilState.DepthEnable = FALSE;
-		state.DepthStencilState.StencilEnable = FALSE;
+
+	state.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+	if (desc.transparency) {
+		state.BlendState.AlphaToCoverageEnable = false;
+		state.BlendState.IndependentBlendEnable = false;
+		auto& rt = state.BlendState.RenderTarget[0];
+
+		rt.BlendEnable = TRUE;
+		rt.LogicOpEnable = FALSE;
+
+		rt.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		rt.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		rt.BlendOp = D3D12_BLEND_OP_ADD;
+
+		rt.SrcBlendAlpha = D3D12_BLEND_ONE;
+		rt.DestBlendAlpha = D3D12_BLEND_ZERO;
+		rt.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+
+		rt.LogicOp = D3D12_LOGIC_OP_NOOP;
+		rt.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
 	}
 
 	state.SampleDesc.Count = 1;
