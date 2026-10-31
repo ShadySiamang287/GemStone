@@ -15,9 +15,9 @@ struct PlanetData {
 };
 
 struct TesselationData {
-    float maxTess = 14.f;
+    float maxTess = 10.f;
     float nearDist = 10.f;
-    float farDist = 90.f;
+    float farDist = 70.f;
 };
 
 class DeferredPass : public RenderPass {

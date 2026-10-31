@@ -16,6 +16,7 @@ TestScene::TestScene() {
     });
 
     mModels.push_back(std::move(planet));
+    mCamera.cameraPos = glm::vec3(0.f ,0.f, 30.f);
 }
 
 void TestScene::Update(GEM::Input& input, GEM::Renderer& renderer, float dt) {

@@ -121,28 +121,30 @@ float FractalNoise(float3 position, float baseFrequency, float ridgedRoughness, 
 
 	baseValue /= amplitudeSum;
 
-    float ridged = 0.0f;
-	float ridgeFreq = ridgedRoughness;
-	float ridgeAmp = 1.f;
-	float ridgeAmpSum = 0.0f;
-
-	for (int j = 0; j < 4; j++) {
-		float noise = SimplexNoise(position * ridgeFreq);
-        float ridge = 1.0f - abs(noise);
-        ridge = pow(ridge, 3.0f); // Keeps peaks sharp
-        ridged += ridge * ridgeAmp;
-        
-        ridgeAmpSum += ridgeAmp;
-        ridgeFreq *= 2.0f;
-        ridgeAmp *= persistence;
-	}
-
-    if (ridgeAmpSum > 0.0f) {
-        ridged /= ridgeAmpSum;
-    }
-
 	baseValue = sign(baseValue) * pow(abs(baseValue), 1.3f);
     float mountainMask = smoothstep(-0.15f, 0.25f, baseValue);
 
+    float ridged = 0.0f;
+	[branch]
+	if (mountainMask > 0.f) {
+		float ridgeFreq = ridgedRoughness;
+		float ridgeAmp = 1.f;
+		float ridgeAmpSum = 0.0f;
+
+		for (int j = 0; j < 4; j++) {
+			float noise = SimplexNoise(position * ridgeFreq);
+			float ridge = 1.0f - abs(noise);
+			ridge = pow(ridge, 3.0f); // Keeps peaks sharp
+			ridged += ridge * ridgeAmp;
+			
+			ridgeAmpSum += ridgeAmp;
+			ridgeFreq *= 2.0f;
+			ridgeAmp *= persistence;
+		}
+
+		if (ridgeAmpSum > 0.0f) {
+			ridged /= ridgeAmpSum;
+		}
+	}
     return baseValue + (ridged * mountainMask * 1.5f);
 }
