@@ -115,6 +115,7 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
 
 void AtmospherePass::OnImGuiRender() {
     ImGui::Begin("Atmosphere Data");
+    ImGui::ColorEdit3("Planet Atmosphere", &mAtmosphereData.atmosphereColour.r);
     ImGui::SliderFloat("Planet Radius", &mAtmosphereData.planetRadius, 0.1f, 100.f);
     ImGui::SliderFloat("Atmosphere Radius", &mAtmosphereData.atmosphereRadius, 0.1f, 100.f);
     ImGui::SliderFloat("Density Falloff", &mAtmosphereData.densityFalloff, 0.1f, 10.f);

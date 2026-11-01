@@ -11,6 +11,7 @@
 #include <imgui.h>
 
 #include "Core/Scene.h"
+#include "Core/GemStoneAPI.h"
 
 #include "pix3.h"
 
@@ -87,6 +88,8 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
 
     mFrameDataBuffer = ResourceFactory::CreateConstantBuffer<FrameData>();
     mFrameDataBuffer->Upload(mFrameData);
+
+    mPointLightBuffer = ResourceFactory::CreateStructuredBuffer<PointLight, 1024>(std::span<PointLight>());
 }
 
 Renderer::~Renderer() = default;
@@ -124,16 +127,17 @@ void Renderer::Render(Scene* scene) {
         pass->Render(*mRenderTargetsPtr.get(), models);
     }
 
+    scene->OnImGuiRenderer();
     for (auto& pass : mRenderPasses){
         pass->OnImGuiRender();
     }
 
-    ImGui::Begin("GemStone");
-    ImGui::Text("Renderer online");
-    ImGui::Text("Models: %zu", models.size());
-    ImGui::End();
-
     mImGuiContext->Render(GraphicsCommands::GetCommandList());
 
     GraphicsCommands::EndFrame();
+}
+
+void Renderer::UpdateLights(std::span<PointLight> lights) {
+    GraphicsCommands::CopyDataToBuffer(mPointLightBuffer->GetResource(), lights.data(), lights.size_bytes());
+    mFrameData.lightCount = lights.size();
 }

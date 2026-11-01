@@ -15,7 +15,7 @@ struct PlanetData {
 };
 
 struct TesselationData {
-    float maxTess = 10.f;
+    float maxTess = 15.f;
     float nearDist = 10.f;
     float farDist = 70.f;
 };

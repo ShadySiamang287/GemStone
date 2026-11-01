@@ -14,6 +14,7 @@ namespace GEM{
 
         virtual void Update(Input& input, GEM::Renderer& renderer, float dt) {}
     
+        virtual void OnImGuiRenderer() {}; 
 
         std::span<Model> GetModels() {
             return mModels;

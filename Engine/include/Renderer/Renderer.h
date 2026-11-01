@@ -27,10 +27,16 @@ namespace GEM{
             return mFrameDataBuffer.get();
         }
 
+        StructuredBuffer<PointLight, 1024>* GetPointLightBuffer() const {
+            return mPointLightBuffer.get();
+        }
+
         void SetCameraMatrix(glm::mat4 matrix) {
             mFrameData.ViewMatrix = matrix;
             mFrameData.inverseViewMatrix = glm::inverse(matrix);
         }
+
+        void UpdateLights(std::span<PointLight> lights);
 
     private:
         GraphicsContext& mContext;
@@ -45,6 +51,6 @@ namespace GEM{
         FrameData mFrameData;
         std::unique_ptr<ConstantBuffer<FrameData>> mFrameDataBuffer;
         std::unique_ptr<ImGuiContext> mImGuiContext;
-    
+        std::unique_ptr<StructuredBuffer<PointLight, 1024>> mPointLightBuffer;
     };
 }

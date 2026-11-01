@@ -5,6 +5,7 @@
 #include "Graphics/ResourceFactory.h"
 
 struct AtmosphereData{
+    glm::vec3 atmosphereColour = {0.15, 0.4, 1.0};
     float planetRadius = 10.f;
     float atmosphereRadius = 14.f;
     float densityFalloff = 7.0f;

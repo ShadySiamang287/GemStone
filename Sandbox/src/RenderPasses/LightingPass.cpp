@@ -5,7 +5,10 @@
 
 using namespace GEM;
 
-LightingPass::LightingPass() {
+LightingPass::LightingPass(ConstantBuffer<FrameData>* frameDataBuffer, StructuredBuffer<PointLight, 1024>* lightBuffer) {
+    mFrameDataBuffer = frameDataBuffer;
+    mLightBuffer = lightBuffer;
+    
     D3D12_STATIC_SAMPLER_DESC linearWrap{};
     linearWrap.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
     linearWrap.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
@@ -24,6 +27,19 @@ LightingPass::LightingPass() {
     RootSignatureDesc lightingRootDesc;
     lightingRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
     lightingRootDesc.name = L"Lighting Root Signature";
+
+    D3D12_ROOT_PARAMETER frameDataParameter {};
+    frameDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    frameDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+
+    frameDataParameter.Descriptor.ShaderRegister = 0; // b0
+    frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
+
+    D3D12_DESCRIPTOR_RANGE lightRange = {};
+    lightRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    lightRange.NumDescriptors = 1;
+    lightRange.BaseShaderRegister = 3;   // t0
+    lightRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
     D3D12_DESCRIPTOR_RANGE albedoRange{};
     albedoRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -46,6 +62,12 @@ LightingPass::LightingPass() {
     depthRange.RegisterSpace = 0;
     depthRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+    D3D12_ROOT_PARAMETER lightingParam;
+    lightingParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    lightingParam.DescriptorTable.NumDescriptorRanges = 1;
+    lightingParam.DescriptorTable.pDescriptorRanges = &lightRange;
+    lightingParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;    
+
     D3D12_ROOT_PARAMETER albedoParam{};
     albedoParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     albedoParam.DescriptorTable.NumDescriptorRanges = 1;
@@ -62,9 +84,11 @@ LightingPass::LightingPass() {
     depthParam.DescriptorTable.pDescriptorRanges = &depthRange;
     depthParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+    lightingRootDesc.parameters.push_back(frameDataParameter);
     lightingRootDesc.parameters.push_back(albedoParam);
     lightingRootDesc.parameters.push_back(normalParam);
     lightingRootDesc.parameters.push_back(depthParam);
+    lightingRootDesc.parameters.push_back(lightingParam);
     lightingRootDesc.samplers.push_back(linearWrap);
 
     mRootSig = ResourceFactory::CreateRootSignature(lightingRootDesc);
@@ -149,9 +173,11 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
         static_cast<int>(manager.GetHeight())
     );
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-    GraphicsCommands::BindSRV(0, colourTarget->GetSRV());
-    GraphicsCommands::BindSRV(1, normalTarget->GetSRV());
-    GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
+    GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
+    GraphicsCommands::BindSRV(1, colourTarget->GetSRV());
+    GraphicsCommands::BindSRV(2, normalTarget->GetSRV());
+    GraphicsCommands::BindSRV(3, depthTarget->GetSRV());
+    GraphicsCommands::BindSRV(4, mLightBuffer->GetSRV());
     GraphicsCommands::Draw(3, 1, 0, 0);
     GraphicsCommands::EndLabel();
 }

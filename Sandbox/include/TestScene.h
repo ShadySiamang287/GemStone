@@ -9,10 +9,12 @@ public:
     TestScene();
     void Update(GEM::Input& input, GEM::Renderer& renderer, float dt) override;
 
+    void OnImGuiRenderer() override;
 private:
 
     std::vector<GEM::Vertex> GeneratePlanetVertices();
     std::vector<uint32_t> GeneratePlanetIndices();
 
+    std::vector<GEM::PointLight> mLights;
     Camera mCamera;
 };

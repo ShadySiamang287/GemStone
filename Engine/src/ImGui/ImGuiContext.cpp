@@ -14,7 +14,9 @@ ImGuiContext::ImGuiContext(GraphicsContext& graphicsContext, HWND window)
     ::ImGui::CreateContext();
     ::ImGui::StyleColorsDark();
 
-    ::ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    auto& io = ::ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     if (!ImGui_ImplWin32_Init(window)) {
         ::ImGui::DestroyContext();
@@ -58,6 +60,7 @@ void ImGuiContext::BeginFrame() {
     ImGui_ImplDX12_NewFrame();
     ImGui_ImplWin32_NewFrame();
     ::ImGui::NewFrame();
+    ::ImGui::DockSpaceOverViewport(0, ::ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 }
 
 void ImGuiContext::Render(ID3D12GraphicsCommandList* commandList) {

@@ -1,12 +1,17 @@
+#include "common.hlsli"
+
 cbuffer FrameData : register(b0)
 {
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
     float4x4 invViewMatrix;
     float4x4 invProjectionMatrix;
+    int lightCount;
+    float3 _padding;
 }
 
 cbuffer AtmosphereData : register(b1) {
+    float3 atmosphereColour;
     float planetRadius;
     float atmosphereRadius;
     float densityFalloff;
@@ -16,10 +21,6 @@ cbuffer AtmosphereData : register(b1) {
 
 Texture2D<float> depthTex : register(t0);
 
-struct VertexInput {
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-};
 
 struct VertexOutput {
     float4 position : SV_Position;
@@ -111,5 +112,5 @@ float4 atmospherePS(VertexOutput vertIn) : SV_Target0{
     }
 
     float alpha = 1.0 - exp(-opticalDepth * strengthMultiplier);
-    return float4(0.15, 0.4, 1.0, alpha);
+    return float4(atmosphereColour, alpha);
 }

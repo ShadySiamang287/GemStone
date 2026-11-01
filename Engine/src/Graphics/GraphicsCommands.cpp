@@ -2,6 +2,8 @@
 
 #include "Graphics/GraphicsContext.h"
 
+#include "Core/GemStoneAPI.h"
+
 #include <pix3.h>
 
 #define CHECK_CONTEXT     \
@@ -291,6 +293,71 @@ void GraphicsCommands::EndLabel() {
     CHECK_CONTEXT
     auto* commandList = sContextPtr->mCommandList.Get();
     PIXEndEvent(commandList);
+}
+
+void GraphicsCommands::CopyDataToBuffer(ID3D12Resource* buffer, void* data, size_t size) {
+    CHECK_CONTEXT
+
+	D3D12MA::ALLOCATION_DESC defaultDesc{};
+	defaultDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation;
+    D3D12MA::ALLOCATION_DESC uploadDesc{};
+    uploadDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+
+    D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
+
+    THROW_IF_FAILED(
+        sContextPtr->mAllocator->CreateResource(
+            &uploadDesc,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            uploadAllocation.GetAddressOf(),
+            IID_NULL,
+            nullptr
+        )
+    );
+    ID3D12Resource* upload = uploadAllocation->GetResource();
+
+    void* mappedData = nullptr;
+    D3D12_RANGE readRange{ 0, 0 };
+
+    THROW_IF_FAILED(upload->Map(0,&readRange, &mappedData));
+
+    std::memcpy(mappedData, data, size);
+
+    upload->Unmap(0, nullptr);
+
+    GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList* commandList){
+        auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
+			buffer,
+			D3D12_RESOURCE_STATE_COMMON,
+			D3D12_RESOURCE_STATE_COPY_DEST
+		);
+
+		commandList->ResourceBarrier(1, &toCopyDest);
+		
+		commandList->CopyBufferRegion(
+            buffer,
+            0,
+            upload,
+            0,
+            size
+        );
+
+        auto barrier =
+            CD3DX12_RESOURCE_BARRIER::Transition(
+                buffer,
+                D3D12_RESOURCE_STATE_COPY_DEST,
+                D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+            );
+
+        commandList->ResourceBarrier(1, &barrier);
+	});
+
+    uploadAllocation.Reset();
 }
 
 GraphicsContext* GraphicsCommands::sContextPtr = nullptr;

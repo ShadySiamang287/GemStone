@@ -1,6 +1,7 @@
 #include "common.hlsli"
 
 Texture2D SceneTexture : register(t0);
+Texture2D BloomTexture : register(t1);
 SamplerState LinearSampler : register(s0);
 
 static const uint TONEMAP_REINHARD_LUMINANCE = 0;
@@ -13,6 +14,7 @@ cbuffer Data : register(b0)
     float exposure;
     float hableValue;
     uint type;
+    float bloomStrength;
 }
 
 float3 ReinhardLuminance(float3 color)
@@ -94,8 +96,9 @@ float3 agx(float3 colour) {
 }
 
 float4 ToneMappingPS(FullScreenVertOut input) : SV_Target {
-    float3 hdrColor = SceneTexture.Sample(LinearSampler, input.uv).rgb;
-    float3 combinedColour = hdrColor * exposure;
+    float3 hdrColour = SceneTexture.Sample(LinearSampler, input.uv).rgb;
+    float3 bloomColour = BloomTexture.Sample(LinearSampler, input.uv).rgb;
+    float3 combinedColour = (hdrColour + bloomColour * bloomStrength) * exposure;
 
     float3 toneMappedColour;
     switch (type) {

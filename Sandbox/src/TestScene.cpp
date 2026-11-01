@@ -3,6 +3,7 @@
 #include <numbers>
 
 #include <Graphics/ResourceFactory.h>
+#include <imgui.h>
 
 TestScene::TestScene() {
 
@@ -23,6 +24,8 @@ void TestScene::Update(GEM::Input& input, GEM::Renderer& renderer, float dt) {
     mCamera.Update(input, dt);
     renderer.SetCameraMatrix(mCamera.getMatrix());
 
+    if (!mLights.empty())
+        renderer.UpdateLights(mLights);
 }
 
 std::vector<GEM::Vertex> TestScene::GeneratePlanetVertices(){
@@ -90,4 +93,23 @@ std::vector<uint32_t> TestScene::GeneratePlanetIndices(){
     }
     std::reverse(indices.begin(), indices.end());
     return indices;
+}
+
+void TestScene::OnImGuiRenderer() {
+    ImGui::Begin("Lights");
+    ImGui::Text("Camera pos, X: %f, Y: %f, Z: %f", mCamera.cameraPos.x, mCamera.cameraPos.y, mCamera.cameraPos.z);
+    if (ImGui::Button("Add Light")) {
+        mLights.push_back({});
+    }
+    for (int i = 0; i < mLights.size(); i++) {
+        ImGui::PushID(i);
+        ImGui::Separator();
+        ImGui::Text("Light %i", i);
+        ImGui::SliderFloat3("Light Position", &mLights[i].positionRange.r, -50.f, 50.f);
+        ImGui::SliderFloat("Light Range", &mLights[i].positionRange.a, 0.f, 100.f);
+        ImGui::ColorEdit3("Light Colour", &mLights[i].colourIntensity.x);
+        ImGui::SliderFloat("Light Intensity", &mLights[i].colourIntensity.w, 0.f, 100.f);
+        ImGui::PopID();
+    }
+    ImGui::End();
 }

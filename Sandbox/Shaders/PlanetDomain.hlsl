@@ -1,13 +1,9 @@
 #include "noise.hlsli"
+#include "common.hlsli"
 
 struct HullOut {
     float3 PosL : POSITION;
     float3 normal : NORMAL;
-};
-
-struct PatchTess {
-    float EdgeTess[3] : SV_TessFactor;
-    float InsideTess : SV_InsideTessFactor;
 };
 
 struct VertexOutDS {
@@ -22,6 +18,10 @@ cbuffer FrameData : register(b0)
 {
     float4x4 ViewMatrix;
     float4x4 ProjectionMatrix;
+    float4x4 invViewMatrix;
+    float4x4 invProjectionMatrix;
+    int lightCount;
+    float3 _padding;
 }
 
 cbuffer PlanetData : register(b1)
@@ -80,7 +80,7 @@ VertexOutDS PlanetDS(PatchTess patchTress, float3 bary: SV_DomainLocation, const
     
     float totalNoise = ShapeTerrain(noise) * terrainStrength;
     
-    float displacedRadius = radius + totalNoise;
+    float displacedRadius = max(radius, radius + totalNoise);
     float3 displacedPosition = posL * displacedRadius;
 
 

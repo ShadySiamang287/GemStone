@@ -1,14 +1,5 @@
 #include "noise.hlsli"
-
-struct VertexInput {
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-};
-
-struct VertexOutput {
-    float3 position : POSITION;
-    float3 normal : NORMAL;
-};
+#include "common.hlsli"
 
 cbuffer FrameData : register(b0)
 {
@@ -16,10 +7,12 @@ cbuffer FrameData : register(b0)
     float4x4 ProjectionMatrix;
     float4x4 invViewMatrix;
     float4x4 invProjectionMatrix;
+    int lightCount;
+    float3 _padding;
 }
 
-VertexOutput vertMain(VertexInput input) {
-    VertexOutput output;
+VertexInput vertMain(VertexInput input) {
+    VertexInput output;
 
     output.position = input.position;
     output.normal = input.normal;

@@ -31,7 +31,7 @@ ToneMappingPass::ToneMappingPass() {
 
     RootSignatureDesc fullscreenRootDesc;
     fullscreenRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-    fullscreenRootDesc.name = L"Fullscreen Root Signature";
+    fullscreenRootDesc.name = L"Tone Mapping Root Signature";
 
     D3D12_DESCRIPTOR_RANGE fullscreenSRVRange{};
     fullscreenSRVRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -46,16 +46,28 @@ ToneMappingPass::ToneMappingPass() {
     fullscreenSRVParameter.DescriptorTable.pDescriptorRanges = &fullscreenSRVRange;
     fullscreenSRVParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
+    D3D12_DESCRIPTOR_RANGE bloom{};
+    bloom.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    bloom.NumDescriptors = 1;
+    bloom.BaseShaderRegister = 1;
+    bloom.RegisterSpace = 0;
+    bloom.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER bloomParam{};
+    bloomParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    bloomParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    bloomParam.DescriptorTable.NumDescriptorRanges = 1;
+    bloomParam.DescriptorTable.pDescriptorRanges = &bloom;
+
     D3D12_ROOT_PARAMETER frameDataParameter {};
     frameDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     frameDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
     frameDataParameter.Descriptor.ShaderRegister = 0; // b0
     frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
 
-
-    fullscreenRootDesc.parameters.push_back(fullscreenSRVParameter);
     fullscreenRootDesc.parameters.push_back(frameDataParameter);
+    fullscreenRootDesc.parameters.push_back(fullscreenSRVParameter);
+    fullscreenRootDesc.parameters.push_back(bloomParam);
     fullscreenRootDesc.samplers.push_back(linearWrap);
 
     mRootSig = ResourceFactory::CreateRootSignature(fullscreenRootDesc);
@@ -77,11 +89,16 @@ ToneMappingPass::ToneMappingPass() {
 void ToneMappingPass::Render(RenderTargetManager& manager, std::span<Model> models) {
     
     auto* lightingTarget = manager.GetRenderTarget(L"Scene Color");
+    auto* bloomTarget = manager.GetRenderTarget(L"Bloom Pong");
     mConstantBuffer->Upload(mData);
 
     GraphicsCommands::BeginLabel(PIX_COLOR(72, 123, 255), "Tone Mapping");
     GraphicsCommands::TransitionRTV(
         *lightingTarget, lightingTarget->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+    GraphicsCommands::TransitionRTV(
+        *bloomTarget, lightingTarget->GetState(),
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
     );
     GraphicsCommands::BindRenderTargets();
@@ -102,8 +119,9 @@ void ToneMappingPass::Render(RenderTargetManager& manager, std::span<Model> mode
         static_cast<int>(manager.GetWidth()),
         static_cast<int>(manager.GetHeight())
     );
-    GraphicsCommands::BindSRV(0, lightingTarget->GetSRV());
-    GraphicsCommands::SetConstantBufferView(1, mConstantBuffer->GetAddress());
+    GraphicsCommands::SetConstantBufferView(0, mConstantBuffer->GetAddress());
+    GraphicsCommands::BindSRV(1, lightingTarget->GetSRV());
+    GraphicsCommands::BindSRV(2, bloomTarget->GetSRV());
     GraphicsCommands::Draw(3, 1, 0, 0);
     GraphicsCommands::EndLabel();
 }
@@ -111,6 +129,7 @@ void ToneMappingPass::Render(RenderTargetManager& manager, std::span<Model> mode
 void ToneMappingPass::OnImGuiRender() {
     ImGui::Begin("Tone Mapping Pass");
     ImGui::SliderFloat("Exposure", &mData.exposure, 0.f, 1.f);
+    ImGui::SliderFloat("Bloom Strength", &mData.bloomStrength, 0.f, 1.f);
     constexpr const char* toneMappingNames[] =
     {
         "Reinhard Luminance",

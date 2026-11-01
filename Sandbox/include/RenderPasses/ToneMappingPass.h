@@ -14,7 +14,7 @@ struct ToneMappingData{
     float exposure = 0.1;
     float hableLuminance = 11.2;
     ToneMappingType type = ToneMappingType::ReinhardLuminance;
-    float pad = 0.0f; 
+    float bloomStrength = 0.15f; 
 };
 
 using namespace GEM;

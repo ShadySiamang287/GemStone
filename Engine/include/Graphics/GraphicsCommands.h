@@ -90,6 +90,8 @@ namespace GEM {
         static void BeginLabel(uint32_t colour, std::string string);
         static void EndLabel();
 
+        static void CopyDataToBuffer(ID3D12Resource* buffer, void* data, size_t size);
+
     private:
         static GraphicsContext* sContextPtr;
     };

@@ -175,7 +175,7 @@ namespace GEM{
             );
 
             buffer->mSize = bufferSize;
-            buffer->mElementCount = static_cast<UINT>(elements.size());
+            buffer->mElementCount = static_cast<UINT>(Capacity);
 
             const UINT srvSlot = sContextPtr->AllocateSRVSlot();
             buffer->mSRVCPU = sContextPtr->GetSRVCPUHandle(srvSlot);
