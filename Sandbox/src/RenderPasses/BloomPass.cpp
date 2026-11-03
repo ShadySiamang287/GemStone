@@ -101,7 +101,7 @@ void BloomPass::Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> 
             static_cast<int>(manager.GetHeight())
         );
         GraphicsCommands::BindSRV(0, bloomPing->GetSRV());
-        GraphicsCommands::SetConstantBufferView(1, mConstantBuffer->GetAddress());
+        GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
             std::array<float, 4> clearColor = {
             0.05f,
             0.10f,
@@ -124,7 +124,7 @@ void BloomPass::Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> 
         };
         mData.horizontal = false;
         mConstantBuffer->Upload(mData);
-        GraphicsCommands::SetConstantBufferView(1, mConstantBuffer->GetAddress());
+        GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
 
         GraphicsCommands::BindRenderTargets(targets);
         GraphicsCommands::Draw(3, 1, 0, 0);

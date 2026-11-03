@@ -119,7 +119,7 @@ void ToneMappingPass::Render(RenderTargetManager& manager, std::span<Model> mode
         static_cast<int>(manager.GetWidth()),
         static_cast<int>(manager.GetHeight())
     );
-    GraphicsCommands::SetConstantBufferView(0, mConstantBuffer->GetAddress());
+    GraphicsCommands::SetGraphicsConstantBufferView(0, mConstantBuffer->GetAddress());
     GraphicsCommands::BindSRV(1, lightingTarget->GetSRV());
     GraphicsCommands::BindSRV(2, bloomTarget->GetSRV());
     GraphicsCommands::Draw(3, 1, 0, 0);

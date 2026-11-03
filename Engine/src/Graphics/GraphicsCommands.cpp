@@ -169,10 +169,16 @@ void GraphicsCommands::BindComputePipeline(ComputePipeline& pipeline){
 
 }
 
-void GraphicsCommands::SetConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address) {
+void GraphicsCommands::SetGraphicsConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address) {
     CHECK_CONTEXT
     auto* commandList = sContextPtr->mCommandList.Get();
     commandList->SetGraphicsRootConstantBufferView(index, address);
+}
+
+void GraphicsCommands::SetComputeConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address) {
+    CHECK_CONTEXT
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->SetComputeRootConstantBufferView(index, address);
 }
 
 void GraphicsCommands::BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor) {
@@ -223,6 +229,21 @@ void GraphicsCommands::TransitionDSV(DepthTarget& depthTarget, D3D12_RESOURCE_ST
 
     sContextPtr->mCommandList->ResourceBarrier(1, &barrier);
     depthTarget.mState = after;
+}
+
+void GraphicsCommands::TransitionBuffer(GPUBuffer& bufferTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
+    CHECK_CONTEXT
+
+    if (before == after) {
+        return;
+    }
+
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        bufferTarget.GetResource(),
+        before,
+        after
+    );
+    sContextPtr->mCommandList->ResourceBarrier(1, &barrier);
 }
 
 void GraphicsCommands::ClearRenderTarget(RenderTarget& renderTarget, const float clearColour[4]) {

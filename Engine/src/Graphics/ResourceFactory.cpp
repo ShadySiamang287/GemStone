@@ -181,6 +181,9 @@ std::unique_ptr<VertexBuffer> ResourceFactory::CreateVertexBuffer(std::span<Vert
 	auto buffer = std::make_unique<VertexBuffer>();
 
 	size_t bufferSize = vertices.size_bytes();
+	D3D12_RESOURCE_DESC vertexDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
+	vertexDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
 	D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
 
 	D3D12MA::ALLOCATION_DESC defaultDesc{};
@@ -189,7 +192,7 @@ std::unique_ptr<VertexBuffer> ResourceFactory::CreateVertexBuffer(std::span<Vert
 	THROW_IF_FAILED(
 		sContextPtr->mAllocator->CreateResource(
 			&defaultDesc,
-			&resourceDesc,
+			&vertexDesc,
 			D3D12_RESOURCE_STATE_COMMON,
 			nullptr,
 			buffer->mAllocation.GetAddressOf(),

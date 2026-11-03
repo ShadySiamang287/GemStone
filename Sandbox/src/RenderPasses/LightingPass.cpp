@@ -173,7 +173,7 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
         static_cast<int>(manager.GetHeight())
     );
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-    GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
+    GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
     GraphicsCommands::BindSRV(1, colourTarget->GetSRV());
     GraphicsCommands::BindSRV(2, normalTarget->GetSRV());
     GraphicsCommands::BindSRV(3, depthTarget->GetSRV());

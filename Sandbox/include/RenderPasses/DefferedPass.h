@@ -28,13 +28,19 @@ public:
 
 private:
     std::shared_ptr<RootSignature> mRootSig; 
+    std::shared_ptr<RootSignature> mComputeSig;
     std::unique_ptr<GraphicsPipeline> mPipeline;
     ConstantBuffer<FrameData>* mFrameDataBuffer = nullptr;
 	std::unique_ptr<ConstantBuffer<PlanetData>> mPlanetDataBuffer = nullptr;
 	std::unique_ptr<ConstantBuffer<TesselationData>> mTesselationDataBuffer = nullptr;
 
+    std::unique_ptr<ComputePipeline> mComputePipeline = nullptr;
+
     PlanetData mPlanetData;
     TesselationData mTesselationData;
 
     std::array<float, 4> mClearColour;
+
+    Model mPlanetMesh;
+    void GenerateBaseMesh();
 };

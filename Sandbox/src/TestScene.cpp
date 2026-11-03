@@ -9,21 +9,6 @@
 TestScene::TestScene() {
     using namespace GEM;
 
-    D3D12_ROOT_PARAMETER param;
-    param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
-    param.Descriptor.ShaderRegister = 0; // Binds to register(u0)
-    param.Descriptor.RegisterSpace = 0;  // Binds to space0
-    param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-
-
-    RootSignatureDesc rootDesc;
-    rootDesc.name = L"Planet Compute Desc";
-    rootDesc.parameters.push_back(param);
-    rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-
-    mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
-    mComputePipeline = ResourceFactory::CreateComputePipeline(mRootSig, ShaderBytecode("Shaders/PlanetCS.dxil"), L"Planet Compute");
-
     auto vertices = GeneratePlanetVertices();
     auto indices = GeneratePlanetIndices();
 

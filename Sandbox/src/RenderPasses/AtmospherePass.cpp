@@ -100,8 +100,8 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
         static_cast<int>(manager.GetHeight())
     );
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-    GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
-    GraphicsCommands::SetConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
+    GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
+    GraphicsCommands::SetGraphicsConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
     GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
     for (auto& model : models){
         for (auto& primitive : model.primitives) {

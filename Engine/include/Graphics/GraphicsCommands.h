@@ -79,11 +79,15 @@ namespace GEM {
 
         static void BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
 
-        static void SetConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address);
+        static void SetGraphicsConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address);
+
+        static void SetComputeConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address);
 
         static void TransitionRTV(RenderTarget& renderTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
 
         static void TransitionDSV(DepthTarget& depthTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
+
+        static void TransitionBuffer(GPUBuffer& bufferTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after);
 
         static void ClearRenderTarget(RenderTarget& renderTarget,const float clearColour[4]);
 

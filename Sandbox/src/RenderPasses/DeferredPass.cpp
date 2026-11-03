@@ -4,6 +4,8 @@
 #include "pix3.h"
 #include "imgui.h"
 
+#include <numbers>
+
 using namespace GEM;
 
 DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
@@ -18,7 +20,7 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
 
     D3D12_ROOT_PARAMETER planetDataParameter{};
 	planetDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    planetDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN;
+    planetDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     planetDataParameter.Descriptor.RegisterSpace = 0;
 	planetDataParameter.Descriptor.ShaderRegister = 1;
 
@@ -61,9 +63,26 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
     desc.wireframe = false;
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
 
+    D3D12_ROOT_PARAMETER param;
+    param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
+    param.Descriptor.ShaderRegister = 0; // Binds to register(u0)
+    param.Descriptor.RegisterSpace = 0;  // Binds to space0
+    param.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+
+    RootSignatureDesc computeDesc;
+    computeDesc.name = L"Planet Compute Desc";
+    computeDesc.parameters.push_back(param);
+    computeDesc.parameters.push_back(planetDataParameter);
+    computeDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+
+    mComputeSig = ResourceFactory::CreateRootSignature(computeDesc);
+    mComputePipeline = ResourceFactory::CreateComputePipeline(mComputeSig, ShaderBytecode("Shaders/PlanetCS.dxil"), L"Planet Compute");
+
     mClearColour = {
         0.f, 0.f, 0.f, 1.f
     };
+
+    GenerateBaseMesh();
 }
 
 void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models) {
@@ -73,6 +92,16 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
 
     GraphicsCommands::BeginLabel(PIX_COLOR(255, 128, 0), "Planet pass");
+
+    GraphicsCommands::BeginLabel(PIX_COLOR(255, 0, 0), "Planet Compute");
+    GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+    GraphicsCommands::BindComputePipeline(*mComputePipeline.get());
+    GraphicsCommands::BindUAV(0, mPlanetMesh.primitives[0].vertexBuffer->GetResource()->GetGPUVirtualAddress());
+    GraphicsCommands::SetComputeConstantBufferView(1, mPlanetDataBuffer->GetAddress());
+    UINT threadXCount = (mPlanetMesh.primitives[0].vertexBuffer->GetVertexCount() + 64 - 1) / 64;
+    GraphicsCommands::DispatchCompute(threadXCount, 1, 1);
+    GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+    GraphicsCommands::EndLabel();
 
     GraphicsCommands::TransitionRTV(
         *colourTarget,
@@ -102,9 +131,9 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::ClearDepthStencil(*depthTarget);
 
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-    GraphicsCommands::SetConstantBufferView(0, mFrameDataBuffer->GetAddress());
-	GraphicsCommands::SetConstantBufferView(1, mPlanetDataBuffer->GetAddress());
-	GraphicsCommands::SetConstantBufferView(2, mTesselationDataBuffer->GetAddress());
+    GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
+	GraphicsCommands::SetGraphicsConstantBufferView(1, mPlanetDataBuffer->GetAddress());
+	GraphicsCommands::SetGraphicsConstantBufferView(2, mTesselationDataBuffer->GetAddress());
     GraphicsCommands::BindViewport(
         0.f,
         0.f,
@@ -119,13 +148,16 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
         static_cast<int>(manager.GetWidth()),
         static_cast<int>(manager.GetHeight())
     );
-    for (auto& model : models){
-        for (auto& primitive : model.primitives) {
-            GraphicsCommands::BindVertexBuffer(*primitive.vertexBuffer.get());
-            GraphicsCommands::BindIndexBuffer(*primitive.indexBuffer.get());
-            GraphicsCommands::DrawIndexed(primitive.indexBuffer->GetIndexCount(), 1, 0, 0, 0);
-        }
-    }
+    GraphicsCommands::BindVertexBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get());
+    GraphicsCommands::BindIndexBuffer(*mPlanetMesh.primitives[0].indexBuffer.get());
+    GraphicsCommands::DrawIndexed(mPlanetMesh.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
+    //for (auto& model : models){
+    //    for (auto& primitive : model.primitives) {
+    //        GraphicsCommands::BindVertexBuffer(*primitive.vertexBuffer.get());
+    //        GraphicsCommands::BindIndexBuffer(*primitive.indexBuffer.get());
+    //        GraphicsCommands::DrawIndexed(primitive.indexBuffer->GetIndexCount(), 1, 0, 0, 0);
+    //    }
+    //}
 
     GraphicsCommands::EndLabel();
 }
@@ -147,4 +179,71 @@ void DeferredPass::OnImGuiRender() {
 
 	mTesselationDataBuffer->Upload(mTesselationData);
     ImGui::End();
+}
+
+void DeferredPass::GenerateBaseMesh() {
+    constexpr float radius = 1.f;
+    constexpr float inverseRad = 1.f / radius;
+    constexpr int stackCount = 20;
+    constexpr int sectorCount = 20;
+
+    constexpr float sectorStep = (2 * std::numbers::pi_v<float>) / static_cast<float>(sectorCount);
+    constexpr float stackStep = std::numbers::pi_v<float> / static_cast<float>(stackCount);
+
+    std::vector<GEM::Vertex> vertices;
+    vertices.reserve(stackCount * sectorCount);
+
+    for (int i = 0; i <= stackCount; i++) {
+        float stackAngle = (std::numbers::pi_v<float> / 2.f) - i * stackStep;
+        float xy = radius * std::cosf(stackAngle);
+        float z = radius * std::sinf(stackAngle);
+
+        for (int j = 0; j <= sectorCount; j++) {
+            GEM::Vertex vert;
+            float sectorAngle = j * sectorStep;
+            vert.position = {
+                xy * std::cosf(sectorAngle),
+                xy * std::sinf(sectorAngle),
+                z
+            };
+
+            vert.normal = {
+                vert.position.x * inverseRad,
+                vert.position.y * inverseRad,
+                vert.position.z * inverseRad,
+            };
+
+            vertices.push_back(vert);
+        }
+    }
+
+    std::vector<uint32_t> indices;
+
+    for (int i = 0; i < stackCount; i++) {
+        int k1 = i * (sectorCount + 1);
+        int k2 = k1 + sectorCount + 1;
+
+        for (int j = 0; j < sectorCount; j++, k1++, k2++) {
+            if (i != 0) {
+                indices.push_back(k1);
+                indices.push_back(k2);
+                indices.push_back(k1 + 1);
+            }
+
+            if (i != (stackCount - 1))
+            {
+                indices.push_back(k1 + 1);
+                indices.push_back(k2);
+                indices.push_back(k2 + 1);
+            }
+
+        }
+    }
+    std::reverse(indices.begin(), indices.end());
+
+    mPlanetMesh.primitives.push_back({
+        ResourceFactory::CreateVertexBuffer(vertices),
+        ResourceFactory::CreateIndexBuffer(indices)
+    });
+
 }
