@@ -265,6 +265,7 @@ std::unique_ptr<VertexBuffer> ResourceFactory::CreateVertexBuffer(std::span<Vert
 	buffer->mView.StrideInBytes = sizeof(Vertex);
 
 	buffer->mAllocation->SetName(L"Vertex Buffer");
+	buffer->mVertexCount = vertices.size();
 
 	return buffer;
 }

@@ -49,7 +49,7 @@ float ShapeTerrain(float rawHeight)
 	return heightOutput;
 }
 
-[numthreads(64, 1, 1)]
+[numthreads(256, 1, 1)]
 void PlanetCS(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
 	VertexInput vert = vertexBuffer[dispatchThreadID.x];
@@ -57,7 +57,7 @@ void PlanetCS(uint3 dispatchThreadID : SV_DispatchThreadID)
 	float noise = FractalNoise(direction, roughness, ridgeRoughness, persistence);
 	float totalNoise = ShapeTerrain(noise);
 	float displacedRadius = max(radius, radius + totalNoise);
-	float3 displacedPosition = vert.position * displacedRadius;
+	float3 displacedPosition = direction * displacedRadius;
 	vert.position = displacedPosition;
 	vert.normal = CalculateNormal(displacedPosition);
 		

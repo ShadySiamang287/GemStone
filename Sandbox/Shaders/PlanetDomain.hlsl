@@ -81,7 +81,7 @@ VertexOutDS PlanetDS(PatchTess patchTress, float3 bary: SV_DomainLocation, const
     float totalNoise = ShapeTerrain(noise) * terrainStrength;
     
     float displacedRadius = max(radius, radius + totalNoise);
-    float3 displacedPosition = posL * displacedRadius;
+    float3 displacedPosition = direction * displacedRadius;
 
 
     dOut.position = mul(ProjectionMatrix, mul(ViewMatrix, float4(displacedPosition, 1.0)));

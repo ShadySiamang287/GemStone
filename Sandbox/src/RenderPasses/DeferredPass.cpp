@@ -98,7 +98,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::BindComputePipeline(*mComputePipeline.get());
     GraphicsCommands::BindUAV(0, mPlanetMesh.primitives[0].vertexBuffer->GetResource()->GetGPUVirtualAddress());
     GraphicsCommands::SetComputeConstantBufferView(1, mPlanetDataBuffer->GetAddress());
-    UINT threadXCount = (mPlanetMesh.primitives[0].vertexBuffer->GetVertexCount() + 64 - 1) / 64;
+    UINT threadXCount = (mPlanetMesh.primitives[0].vertexBuffer->GetVertexCount() + 256 - 1) / 256;
     GraphicsCommands::DispatchCompute(threadXCount, 1, 1);
     GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
     GraphicsCommands::EndLabel();
