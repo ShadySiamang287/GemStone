@@ -63,7 +63,7 @@ void ImGuiContext::BeginFrame() {
     ::ImGui::DockSpaceOverViewport(0, ::ImGui::GetMainViewport(), ImGuiDockNodeFlags_PassthruCentralNode);
 }
 
-void ImGuiContext::Render(ID3D12GraphicsCommandList* commandList) {
+void ImGuiContext::Render(ID3D12GraphicsCommandList4* commandList) {
     if (!mInitialized || !commandList) {
         return;
     }

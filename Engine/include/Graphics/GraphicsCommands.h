@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Graphics/GraphicsPipeline.h"
+#include "Graphics/ComputePipeline.h"
 #include "Graphics/GPUResource.h"
 
 namespace GEM {
@@ -16,13 +17,13 @@ namespace GEM {
 
         /// @brief Executes the lambda and then stalls the GPU uuntil its finished
         /// @param record The commands to execute
-        static void ExecuteImmediate(const std::function<void(ID3D12GraphicsCommandList*)>& record);
+        static void ExecuteImmediate(const std::function<void(ID3D12GraphicsCommandList4*)>& record);
 
         /// @brief Prepares the frame to be renderered
         static void BeginFrame();
 
         /// @brief Gets the command list currently recording the frame.
-        static ID3D12GraphicsCommandList* GetCommandList();
+        static ID3D12GraphicsCommandList4* GetCommandList();
 
         /// @brief Ends the frame and presents
         static void EndFrame();
@@ -42,6 +43,7 @@ namespace GEM {
         /// @param firstInstance where the first instance is
         static void DrawIndexed(const int& indexCount, const int& instanceCount, const int& firstIndex, const int& firstVertex, const int& firstInstance);
 
+        static void DispatchCompute(const UINT& countX, const UINT& countY, const UINT& countZ);
 
         /// @brief Binds the viewport
         /// @param x1 intial X
@@ -71,7 +73,11 @@ namespace GEM {
         /// @param pipeline The pipeline to bind
         static void BindGraphicsPipeline(GraphicsPipeline& pipeline);
 
+        static void BindComputePipeline(ComputePipeline& pipeline);
+
         static void BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor);
+
+        static void BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
 
         static void SetConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address);
 

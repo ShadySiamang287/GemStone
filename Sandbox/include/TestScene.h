@@ -16,5 +16,8 @@ private:
     std::vector<uint32_t> GeneratePlanetIndices();
 
     std::vector<GEM::PointLight> mLights;
+
+    std::unique_ptr<GEM::ComputePipeline> mComputePipeline = nullptr;
+    std::shared_ptr<GEM::RootSignature> mRootSig = nullptr; 
     Camera mCamera;
 };

@@ -20,7 +20,7 @@ void GraphicsCommands::RegisterContext(GraphicsContext* context) {
     sContextPtr = context;
 }
 
-void GraphicsCommands::ExecuteImmediate(const std::function<void(ID3D12GraphicsCommandList*)>& record){
+void GraphicsCommands::ExecuteImmediate(const std::function<void(ID3D12GraphicsCommandList4*)>& record){
     CHECK_CONTEXT
 
     auto* context = sContextPtr;
@@ -59,7 +59,7 @@ void GraphicsCommands::BeginFrame() {
 	commandList->SetDescriptorHeaps(1, descriptorHeaps);
 }
 
-ID3D12GraphicsCommandList* GraphicsCommands::GetCommandList() {
+ID3D12GraphicsCommandList4* GraphicsCommands::GetCommandList() {
 	if (!sContextPtr) {
 		return nullptr;
 	}
@@ -108,6 +108,12 @@ void GraphicsCommands::DrawIndexed(const int& indexCount, const int& instanceCou
     commandList->DrawIndexedInstanced(indexCount, instanceCount, firstIndex, firstVertex, firstInstance);
 }
 
+void GraphicsCommands::DispatchCompute(const UINT& countX, const UINT& countY, const UINT& countZ) {
+    CHECK_CONTEXT
+
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->Dispatch(countX, countY, countZ);
+}
 
 void GraphicsCommands::BindViewport(const float& x1, const float& y1, const float& x2, const float& y2, const float& minDepth, const float& maxDepth) {
     CHECK_CONTEXT
@@ -154,6 +160,15 @@ void GraphicsCommands::BindGraphicsPipeline(GraphicsPipeline& pipeline) {
     commandList->IASetPrimitiveTopology(pipeline.mTopology);
 }
 
+void GraphicsCommands::BindComputePipeline(ComputePipeline& pipeline){
+    CHECK_CONTEXT
+    auto* commandList = sContextPtr->mCommandList.Get();
+
+    commandList->SetComputeRootSignature(pipeline.mRootSignature.Get());
+    commandList->SetPipelineState(pipeline.mPipelineState.Get());
+
+}
+
 void GraphicsCommands::SetConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address) {
     CHECK_CONTEXT
     auto* commandList = sContextPtr->mCommandList.Get();
@@ -167,6 +182,13 @@ void GraphicsCommands::BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HAN
         rootParameterIndex,
         descriptor
     );
+}
+
+void GraphicsCommands::BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address){
+    CHECK_CONTEXT
+
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->SetComputeRootUnorderedAccessView(rootParameterIndex, address);
 }
 
 void GraphicsCommands::TransitionRTV(RenderTarget& renderTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
@@ -330,7 +352,7 @@ void GraphicsCommands::CopyDataToBuffer(ID3D12Resource* buffer, void* data, size
 
     upload->Unmap(0, nullptr);
 
-    GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList* commandList){
+    GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList){
         auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
 			buffer,
 			D3D12_RESOURCE_STATE_COMMON,

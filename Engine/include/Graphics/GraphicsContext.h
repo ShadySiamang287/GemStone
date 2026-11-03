@@ -18,7 +18,7 @@ namespace GEM{
             return mCommandQueue.Get();
         }
 
-        ID3D12GraphicsCommandList* GetCommandList() const {
+        ID3D12GraphicsCommandList4* GetCommandList() const {
             return mCommandList.Get();
         }
 
@@ -63,7 +63,7 @@ namespace GEM{
 
 		Microsoft::WRL::ComPtr<ID3D12CommandQueue> mCommandQueue;
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator>mCommandAllocator;
-        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> mCommandList;
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> mCommandList;
 
         Microsoft::WRL::ComPtr<ID3D12Fence> mFence;
 

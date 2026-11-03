@@ -98,7 +98,7 @@ void GraphicsContext::CreateAllocator() {
 void GraphicsContext::CreateDevice(){
     Microsoft::WRL::ComPtr<ID3D12Device> baseDevice;
 
-    THROW_IF_FAILED(D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&baseDevice)));
+    THROW_IF_FAILED(D3D12CreateDevice(mAdapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&baseDevice)));
 
     // Query the ray-tracing-capable interface.
     THROW_IF_FAILED(baseDevice.As(&mDevice));

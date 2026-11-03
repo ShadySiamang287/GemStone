@@ -18,7 +18,7 @@ namespace GEM {
         void BeginFrame();
 
         /// @brief Records the current ImGui draw data into an open command list.
-        void Render(ID3D12GraphicsCommandList* commandList);
+        void Render(ID3D12GraphicsCommandList4* commandList);
 
     private:
         static void AllocateDescriptor(

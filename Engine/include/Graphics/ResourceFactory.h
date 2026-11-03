@@ -2,6 +2,7 @@
 
 #include "Graphics/GraphicsContext.h"
 #include "Graphics/GraphicsPipeline.h"
+#include "Graphics/ComputePipeline.h"
 #include "Graphics/RootSignature.h"
 #include "Graphics/RenderingStructs.h"
 #include "Graphics/GPUResource.h"
@@ -29,6 +30,9 @@ namespace GEM{
         /// @return A unique ptr to the the graphics pipeline
         static std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const GraphicsPipelineDescription& desc);
        
+        static std::unique_ptr<ComputePipeline> CreateComputePipeline(std::shared_ptr<const RootSignature> rootSignature, ShaderBytecode shaderModule, std::wstring name);
+
+
         /// @brief This creates a root signature
         /// @param desc the description of the root signature
         /// @return a newly created root signature
@@ -149,7 +153,7 @@ namespace GEM{
             upload->Unmap(0, nullptr);
 
             GraphicsCommands::ExecuteImmediate(
-                [&](ID3D12GraphicsCommandList* commandList) {
+                [&](ID3D12GraphicsCommandList4* commandList) {
                     auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
                         destination,
                         D3D12_RESOURCE_STATE_COMMON,

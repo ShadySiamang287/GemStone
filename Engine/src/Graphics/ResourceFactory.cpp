@@ -113,6 +113,22 @@ std::unique_ptr<GraphicsPipeline> ResourceFactory::CreateGraphicsPipeline(const 
 	return std::unique_ptr<GraphicsPipeline>(pipeline);
 }
 
+std::unique_ptr<ComputePipeline> ResourceFactory::CreateComputePipeline(std::shared_ptr<const RootSignature> rootSignature, ShaderBytecode shaderModule, std::wstring name) {
+	CHECK_CONTEXT(nullptr);
+
+	ComputePipeline* pipeline = new ComputePipeline();
+	pipeline->mRootSignature = rootSignature->Get();
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC desc{};
+	desc.CS = shaderModule.GetBytecode();
+	desc.pRootSignature = rootSignature->Get();
+	
+	THROW_IF_FAILED(sContextPtr->mDevice->CreateComputePipelineState(&desc, IID_PPV_ARGS(&pipeline->mPipelineState)));
+	THROW_IF_FAILED(pipeline->mPipelineState->SetName(name.c_str()));
+
+	return std::unique_ptr<ComputePipeline>(pipeline);
+}
+
 std::shared_ptr<RootSignature> ResourceFactory::CreateRootSignature(const RootSignatureDesc& desc){
 	CHECK_CONTEXT(nullptr);
 
@@ -213,7 +229,7 @@ std::unique_ptr<VertexBuffer> ResourceFactory::CreateVertexBuffer(std::span<Vert
     upload->Unmap(0, nullptr);
 
 	// copy the transfer buffer to the actual buffer
-	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList* commandList){
+	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList){
         auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
 			destination,
 			D3D12_RESOURCE_STATE_COMMON,
@@ -303,7 +319,7 @@ std::unique_ptr<IndexBuffer> ResourceFactory::CreateIndexBuffer(std::span<uint32
     upload->Unmap(0, nullptr);
 
 	// copy the transfer buffer to the actual buffer
-	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList* commandList){
+	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList){
         auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
 			destination,
 			D3D12_RESOURCE_STATE_COMMON,
