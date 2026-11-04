@@ -7,6 +7,8 @@
 #include "Graphics/RenderingStructs.h"
 #include "Graphics/GPUResource.h"
 #include "Graphics/GraphicsCommands.h"
+#include "Graphics/DXR/AccelerationStructs.h"
+#include "Graphics/Model.h"
 
 #define CHECK_CONTEXT(OUTPUT)     \
     if (!sContextPtr) {  \
@@ -31,7 +33,6 @@ namespace GEM{
         static std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const GraphicsPipelineDescription& desc);
        
         static std::unique_ptr<ComputePipeline> CreateComputePipeline(std::shared_ptr<const RootSignature> rootSignature, ShaderBytecode shaderModule, std::wstring name);
-
 
         /// @brief This creates a root signature
         /// @param desc the description of the root signature
@@ -204,6 +205,10 @@ namespace GEM{
             buffer->mAllocation->SetName(L"Structured Buffer");
             return buffer;
         }
+    
+        static std::unique_ptr<BLAS> CreateBLAS(const Primitive& primitive, std::wstring name, bool opaque);
+    
+        static std::unique_ptr<TLAS> CreateTLAS(UINT maxInstances); 
     private:
         static GraphicsContext* sContextPtr;
     };

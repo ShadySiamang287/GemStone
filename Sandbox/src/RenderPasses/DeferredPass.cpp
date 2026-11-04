@@ -8,8 +8,9 @@
 
 using namespace GEM;
 
-DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer) {
+DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tlas) {
     mFrameDataBuffer = frameDataBuffer;
+    tlasPtr = tlas;
 
     D3D12_ROOT_PARAMETER frameDataParameter {};
     frameDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -101,6 +102,9 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     UINT threadXCount = (mPlanetMesh.primitives[0].vertexBuffer->GetVertexCount() + 256 - 1) / 256;
     GraphicsCommands::DispatchCompute(threadXCount, 1, 1);
     GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+    GraphicsCommands::RebuildBLAS(*mBLAS.get());
+    tlasPtr->AddInstance(*mBLAS.get(), 0, 0xFF, glm::mat4x3(1.f));
+    GraphicsCommands::RebuildTLAS(*tlasPtr);
     GraphicsCommands::EndLabel();
 
     GraphicsCommands::TransitionRTV(
@@ -151,13 +155,6 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::BindVertexBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get());
     GraphicsCommands::BindIndexBuffer(*mPlanetMesh.primitives[0].indexBuffer.get());
     GraphicsCommands::DrawIndexed(mPlanetMesh.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
-    //for (auto& model : models){
-    //    for (auto& primitive : model.primitives) {
-    //        GraphicsCommands::BindVertexBuffer(*primitive.vertexBuffer.get());
-    //        GraphicsCommands::BindIndexBuffer(*primitive.indexBuffer.get());
-    //        GraphicsCommands::DrawIndexed(primitive.indexBuffer->GetIndexCount(), 1, 0, 0, 0);
-    //    }
-    //}
 
     GraphicsCommands::EndLabel();
 }
@@ -245,5 +242,7 @@ void DeferredPass::GenerateBaseMesh() {
         ResourceFactory::CreateVertexBuffer(vertices),
         ResourceFactory::CreateIndexBuffer(indices)
     });
+
+    mBLAS = ResourceFactory::CreateBLAS(mPlanetMesh.primitives[0], L"Planet BLAS", true);
 
 }

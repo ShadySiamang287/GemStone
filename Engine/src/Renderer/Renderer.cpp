@@ -90,6 +90,8 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
     mFrameDataBuffer->Upload(mFrameData);
 
     mPointLightBuffer = ResourceFactory::CreateStructuredBuffer<PointLight, 1024>(std::span<PointLight>());
+
+    mTLASPtr = ResourceFactory::CreateTLAS(128);
 }
 
 Renderer::~Renderer() = default;
@@ -120,7 +122,7 @@ void Renderer::Render(Scene* scene) {
     GraphicsCommands::BeginFrame();
     mImGuiContext->BeginFrame();
     mFrameDataBuffer->Upload(mFrameData);
-
+    mTLASPtr->Clear();
     auto models = scene->GetModels();
 
     for (auto& pass : mRenderPasses) {

@@ -22,7 +22,7 @@ struct TesselationData {
 
 class DeferredPass : public RenderPass {
 public:
-    DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer);
+    DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tlas);
     void Render(RenderTargetManager& manager, std::span<Model> models) override;
 	void OnImGuiRender() override;
 
@@ -35,6 +35,8 @@ private:
 	std::unique_ptr<ConstantBuffer<TesselationData>> mTesselationDataBuffer = nullptr;
 
     std::unique_ptr<ComputePipeline> mComputePipeline = nullptr;
+    std::unique_ptr<BLAS> mBLAS = nullptr;
+    TLAS* tlasPtr = nullptr;
 
     PlanetData mPlanetData;
     TesselationData mTesselationData;

@@ -24,6 +24,7 @@ target_sources(Engine PRIVATE
     src/Renderer/Renderer.cpp
     src/Core/Input.cpp
     src/ImGui/ImGuiContext.cpp
+    src/Graphics/DXR/AccelerationStructs.cpp
 )
 
 target_include_directories(Engine

@@ -15,7 +15,7 @@ struct AtmosphereData{
 
 class AtmospherePass : public GEM::RenderPass {
 public:
-    AtmospherePass(GEM::ConstantBuffer<GEM::FrameData>* frameDataBuffer);
+    AtmospherePass(GEM::ConstantBuffer<GEM::FrameData>* frameDataBuffer, GEM::TLAS* tlas);
     void Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> models) override;
 	void OnImGuiRender() override;
 
@@ -25,4 +25,10 @@ private:
     GEM::ConstantBuffer<GEM::FrameData>* mFrameDataBuffer = nullptr;
     std::unique_ptr<GEM::ConstantBuffer<AtmosphereData>> mAtmosphereDataBuffer = nullptr;
     AtmosphereData mAtmosphereData;
+
+    void GenerateBaseMesh();
+
+    GEM::Model mModel;
+    std::unique_ptr<GEM::BLAS> mBlas = nullptr;
+    GEM::TLAS* tlasPtr;
 };

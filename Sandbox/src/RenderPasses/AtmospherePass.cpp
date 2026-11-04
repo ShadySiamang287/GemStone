@@ -1,12 +1,14 @@
 #include "RenderPasses/AtmospherePass.h"
+#include <numbers>
 
 #include <pix3.h>
 #include <imgui.h>
 
 using namespace GEM;
 
-AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer){
+AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tlas){
     mFrameDataBuffer = frameDataBuffer;
+    tlasPtr = tlas;
 
     RootSignatureDesc rootDesc;
     rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -62,6 +64,8 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer){
 
     mAtmosphereDataBuffer = ResourceFactory::CreateConstantBuffer<AtmosphereData>();
     mAtmosphereDataBuffer->Upload(mAtmosphereData);
+
+    GenerateBaseMesh();
 }
 
 void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> models) {
@@ -75,6 +79,11 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
     auto* colourTarget = manager.GetRenderTarget(L"Scene Color");
     auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
     GraphicsCommands::BeginLabel(PIX_COLOR(0, 128, 255), "Atmosphere pass");
+
+    glm::mat4x4 transform = glm::scale({1.f}, glm::vec3{mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius});
+    tlasPtr->AddInstance(*mBlas.get(), 0, 0xFF, glm::mat4x3(transform));
+    GraphicsCommands::RebuildTLAS(*tlasPtr);
+
     GraphicsCommands::TransitionDSV(
         *depthTarget, depthTarget->GetState(),
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
@@ -103,13 +112,9 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
     GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
     GraphicsCommands::SetGraphicsConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
     GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
-    for (auto& model : models){
-        for (auto& primitive : model.primitives) {
-            GraphicsCommands::BindVertexBuffer(*primitive.vertexBuffer.get());
-            GraphicsCommands::BindIndexBuffer(*primitive.indexBuffer.get());
-            GraphicsCommands::DrawIndexed(primitive.indexBuffer->GetIndexCount(), 1, 0, 0, 0);
-        }
-    }
+    GraphicsCommands::BindVertexBuffer(*mModel.primitives[0].vertexBuffer.get());
+    GraphicsCommands::BindIndexBuffer(*mModel.primitives[0].indexBuffer.get());
+    GraphicsCommands::DrawIndexed(mModel.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
     GraphicsCommands::EndLabel();
 }
 
@@ -124,4 +129,73 @@ void AtmospherePass::OnImGuiRender() {
     ImGui::End();
 
     mAtmosphereDataBuffer->Upload(mAtmosphereData);
+}
+
+void AtmospherePass::GenerateBaseMesh() {
+    constexpr float radius = 1.f;
+    constexpr float inverseRad = 1.f / radius;
+    constexpr int stackCount = 20;
+    constexpr int sectorCount = 20;
+
+    constexpr float sectorStep = (2 * std::numbers::pi_v<float>) / static_cast<float>(sectorCount);
+    constexpr float stackStep = std::numbers::pi_v<float> / static_cast<float>(stackCount);
+
+    std::vector<GEM::Vertex> vertices;
+    vertices.reserve(stackCount * sectorCount);
+
+    for (int i = 0; i <= stackCount; i++) {
+        float stackAngle = (std::numbers::pi_v<float> / 2.f) - i * stackStep;
+        float xy = radius * std::cosf(stackAngle);
+        float z = radius * std::sinf(stackAngle);
+
+        for (int j = 0; j <= sectorCount; j++) {
+            GEM::Vertex vert;
+            float sectorAngle = j * sectorStep;
+            vert.position = {
+                xy * std::cosf(sectorAngle),
+                xy * std::sinf(sectorAngle),
+                z
+            };
+
+            vert.normal = {
+                vert.position.x * inverseRad,
+                vert.position.y * inverseRad,
+                vert.position.z * inverseRad,
+            };
+
+            vertices.push_back(vert);
+        }
+    }
+
+    std::vector<uint32_t> indices;
+
+    for (int i = 0; i < stackCount; i++) {
+        int k1 = i * (sectorCount + 1);
+        int k2 = k1 + sectorCount + 1;
+
+        for (int j = 0; j < sectorCount; j++, k1++, k2++) {
+            if (i != 0) {
+                indices.push_back(k1);
+                indices.push_back(k2);
+                indices.push_back(k1 + 1);
+            }
+
+            if (i != (stackCount - 1))
+            {
+                indices.push_back(k1 + 1);
+                indices.push_back(k2);
+                indices.push_back(k2 + 1);
+            }
+
+        }
+    }
+    std::reverse(indices.begin(), indices.end());
+
+    mModel.primitives.push_back({
+        ResourceFactory::CreateVertexBuffer(vertices),
+        ResourceFactory::CreateIndexBuffer(indices)
+    });
+
+    mBlas = ResourceFactory::CreateBLAS(mModel.primitives[0], L"Atmosphere BLAS", false);
+
 }

@@ -3,6 +3,7 @@
 #include "Graphics/GraphicsPipeline.h"
 #include "Graphics/ComputePipeline.h"
 #include "Graphics/GPUResource.h"
+#include "Graphics/DXR/AccelerationStructs.h"
 
 namespace GEM {
     class GraphicsContext;
@@ -101,6 +102,10 @@ namespace GEM {
         static void EndLabel();
 
         static void CopyDataToBuffer(ID3D12Resource* buffer, void* data, size_t size);
+
+        static void RebuildBLAS(BLAS& blas);
+
+        static void RebuildTLAS(TLAS& tlas);
 
     private:
         static GraphicsContext* sContextPtr;

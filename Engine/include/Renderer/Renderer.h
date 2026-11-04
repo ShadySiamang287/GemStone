@@ -1,7 +1,6 @@
 #pragma once
 #include "Graphics/GPUResource.h"
-#include "Graphics/GraphicsPipeline.h"
-#include "Graphics/RootSignature.h"
+#include "Graphics/DXR/AccelerationStructs.h"
 #include "Renderer/RenderTargetManager.h"
 #include "Graphics/RenderingStructs.h"
 
@@ -31,6 +30,10 @@ namespace GEM{
             return mPointLightBuffer.get();
         }
 
+        TLAS* GetTLAS() const{
+            return mTLASPtr.get();
+        }
+
         void SetCameraMatrix(glm::mat4 matrix) {
             mFrameData.ViewMatrix = matrix;
             mFrameData.inverseViewMatrix = glm::inverse(matrix);
@@ -52,5 +55,6 @@ namespace GEM{
         std::unique_ptr<ConstantBuffer<FrameData>> mFrameDataBuffer;
         std::unique_ptr<ImGuiContext> mImGuiContext;
         std::unique_ptr<StructuredBuffer<PointLight, 1024>> mPointLightBuffer;
+        std::unique_ptr<TLAS> mTLASPtr;
     };
 }

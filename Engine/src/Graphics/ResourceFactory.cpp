@@ -361,5 +361,222 @@ std::unique_ptr<IndexBuffer> ResourceFactory::CreateIndexBuffer(std::span<uint32
 	return buffer;
 }
 
+std::unique_ptr<BLAS> ResourceFactory::CreateBLAS(const Primitive& primitive, std::wstring name, bool opaque) {
+	CHECK_CONTEXT(nullptr)
+
+	BLAS* blas = new BLAS();
+
+	blas->mPrimitives.push_back(&primitive);
+
+	D3D12_RAYTRACING_GEOMETRY_DESC geomDesc = {};
+	geomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+	geomDesc.Triangles.VertexBuffer.StartAddress = primitive.vertexBuffer->GetResource()->GetGPUVirtualAddress();
+	geomDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+	geomDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+	geomDesc.Triangles.VertexCount = primitive.vertexBuffer->GetVertexCount();
+
+	geomDesc.Triangles.IndexBuffer = primitive.indexBuffer->GetResource()->GetGPUVirtualAddress();
+	geomDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+	geomDesc.Triangles.IndexCount = primitive.indexBuffer->GetIndexCount();
+
+
+	geomDesc.Triangles.Transform3x4 = 0;
+
+	if (opaque) {
+		geomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+	} else {
+		geomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+	}
+	blas->mGeometries.push_back(geomDesc);
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
+	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	inputs.NumDescs = 1;
+	inputs.pGeometryDescs = &geomDesc;
+	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
+	sContextPtr->mDevice->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+
+	D3D12MA::ALLOCATION_DESC defaultDesc{};
+	defaultDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	UINT64 scratchSize = std::max(info.ScratchDataSizeInBytes, info.UpdateScratchDataSizeInBytes);
+	blas->mScratchSize = scratchSize;
+
+	D3D12_RESOURCE_DESC scratchDesc = CD3DX12_RESOURCE_DESC::Buffer(scratchSize);
+	scratchDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	D3D12_RESOURCE_DESC resultDesc = CD3DX12_RESOURCE_DESC::Buffer(info.ResultDataMaxSizeInBytes);
+	resultDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	THROW_IF_FAILED(
+		sContextPtr->mAllocator->CreateResource(
+			&defaultDesc,
+			&scratchDesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			blas->mScratchAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		)
+	);
+	THROW_IF_FAILED(
+		sContextPtr->mAllocator->CreateResource(
+			&defaultDesc,
+			&resultDesc,
+			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+			nullptr,
+			blas->mAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		)
+	);
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
+	asDesc.Inputs = inputs;
+	asDesc.DestAccelerationStructureData = blas->mAllocation->GetResource()->GetGPUVirtualAddress();
+	asDesc.ScratchAccelerationStructureData = blas->mScratchAllocation->GetResource()->GetGPUVirtualAddress();
+
+	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList) {
+        std::vector<D3D12_RESOURCE_BARRIER> preBarriers;
+		D3D12_RESOURCE_BARRIER preVertex = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.vertexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+		);
+
+
+		preBarriers.push_back(preVertex);
+
+		D3D12_RESOURCE_BARRIER preIndex = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.indexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_INDEX_BUFFER,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+		);
+
+		preBarriers.push_back(preIndex);
+        commandList->ResourceBarrier(preBarriers.size(), preBarriers.data());
+		commandList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
+
+        std::vector<D3D12_RESOURCE_BARRIER> postBarriers;
+		D3D12_RESOURCE_BARRIER vertex = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.vertexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+		);
+
+		postBarriers.push_back(vertex);
+
+		D3D12_RESOURCE_BARRIER index = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.indexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_INDEX_BUFFER
+		);
+
+		postBarriers.push_back(index);
+
+		D3D12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::UAV(
+            blas->GetResource()
+        );
+        postBarriers.push_back(uavBarrier);
+		commandList->ResourceBarrier(postBarriers.size(), postBarriers.data());
+	});
+	blas->mAllocation->SetName(name.c_str());
+	blas->mName = name.c_str();
+	return std::unique_ptr<BLAS>(blas);
+}
+
+std::unique_ptr<TLAS> ResourceFactory::CreateTLAS(UINT maxInstances) {
+	TLAS* tlas = new TLAS();
+	tlas->mCapacity = maxInstances;
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
+	inputs.Type          = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+	inputs.Flags         = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+	inputs.DescsLayout   = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	inputs.NumDescs      = maxInstances;
+	inputs.InstanceDescs = 0;
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
+	sContextPtr->mDevice->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+
+
+	D3D12MA::ALLOCATION_DESC defaultDesc{};
+	defaultDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	
+	D3D12_RESOURCE_DESC scratchDesc = CD3DX12_RESOURCE_DESC::Buffer(info.ScratchDataSizeInBytes);
+	scratchDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	D3D12_RESOURCE_DESC resultDesc = CD3DX12_RESOURCE_DESC::Buffer(info.ResultDataMaxSizeInBytes);
+	resultDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	tlas->mScratchSize = info.ScratchDataSizeInBytes;
+
+	THROW_IF_FAILED(
+		sContextPtr->mAllocator->CreateResource(
+			&defaultDesc,
+			&scratchDesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			tlas->mScratchAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		)
+	);
+	THROW_IF_FAILED(
+		sContextPtr->mAllocator->CreateResource(
+			&defaultDesc,
+			&resultDesc,
+			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+			nullptr,
+			tlas->mAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		)
+	);
+
+	D3D12MA::ALLOCATION_DESC uploadDesc{};
+	uploadDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+	D3D12_RESOURCE_DESC instDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * std::max(maxInstances, 1u));
+	THROW_IF_FAILED(sContextPtr->mAllocator->CreateResource(
+		&uploadDesc, &instDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+		tlas->mInstanceAllocation.GetAddressOf(), IID_NULL, nullptr));
+	THROW_IF_FAILED(tlas->mInstanceAllocation->GetResource()->Map(0, nullptr, &tlas->mInstanceMapped));
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
+	asDesc.Inputs = inputs;
+	asDesc.Inputs.NumDescs = 0;
+	asDesc.DestAccelerationStructureData = tlas->mAllocation->GetResource()->GetGPUVirtualAddress();
+	asDesc.ScratchAccelerationStructureData = tlas->mScratchAllocation->GetResource()->GetGPUVirtualAddress();
+
+	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList) {
+		commandList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
+		D3D12_RESOURCE_BARRIER uavBarrier = {};
+		uavBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+		uavBarrier.UAV.pResource = tlas->GetResource();
+		commandList->ResourceBarrier(1, &uavBarrier);
+	});
+
+	UINT srvSlot = sContextPtr->AllocateSRVSlot();
+	tlas->mSRVCPU = sContextPtr->GetSRVCPUHandle(srvSlot);
+	tlas->mSRVGPU = sContextPtr->GetSRVGPUHandle(srvSlot);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc{};
+	srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+	srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	srvDesc.RaytracingAccelerationStructure.Location = tlas->GetResource()->GetGPUVirtualAddress();
+
+	sContextPtr->mDevice->CreateShaderResourceView(
+		nullptr,
+		&srvDesc,
+		tlas->mSRVCPU
+	);
+	tlas->GetResource()->SetName(L"TLAS Buffer");
+
+	return std::unique_ptr<TLAS>(tlas);
+}
 
 GraphicsContext* ResourceFactory::sContextPtr = nullptr;
