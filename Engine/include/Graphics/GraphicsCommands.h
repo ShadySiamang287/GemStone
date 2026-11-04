@@ -4,6 +4,7 @@
 #include "Graphics/ComputePipeline.h"
 #include "Graphics/GPUResource.h"
 #include "Graphics/DXR/AccelerationStructs.h"
+#include "Graphics/DXR/RaytracingPipeline.h"
 
 namespace GEM {
     class GraphicsContext;
@@ -46,6 +47,8 @@ namespace GEM {
 
         static void DispatchCompute(const UINT& countX, const UINT& countY, const UINT& countZ);
 
+        static void DispatchRays(ShaderTable& shaderTable, UINT width, UINT height);
+
         /// @brief Binds the viewport
         /// @param x1 intial X
         /// @param y1 inital Y
@@ -76,7 +79,11 @@ namespace GEM {
 
         static void BindComputePipeline(ComputePipeline& pipeline);
 
+        static void BindRaytracingPipeline(RaytracingPipeline& pipeline);
+
         static void BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor);
+
+        static void BindComputeSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor);
 
         static void BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
 

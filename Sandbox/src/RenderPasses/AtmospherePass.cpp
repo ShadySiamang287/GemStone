@@ -66,55 +66,110 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
     mAtmosphereDataBuffer->Upload(mAtmosphereData);
 
     GenerateBaseMesh();
+
+    RootSignatureDesc rtRootDesc{};
+    rtRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    rtRootDesc.name = L"RT Root Sig";
+
+    D3D12_ROOT_PARAMETER accelParam{};
+    accelParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+    accelParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    accelParam.Descriptor.ShaderRegister = 0;
+    accelParam.Descriptor.RegisterSpace = 0;
+
+    rtRootDesc.parameters.push_back(accelParam);
+
+    D3D12_DESCRIPTOR_RANGE uavRange{};
+    uavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+    uavRange.NumDescriptors = 1;
+    uavRange.BaseShaderRegister = 0; // u0
+    uavRange.RegisterSpace = 0;
+    uavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
+    D3D12_ROOT_PARAMETER outputRT{};
+    outputRT.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    outputRT.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    outputRT.DescriptorTable.NumDescriptorRanges = 1;
+    outputRT.DescriptorTable.pDescriptorRanges = &uavRange;
+
+    rtRootDesc.parameters.push_back(outputRT);
+
+    mRTRootSig = ResourceFactory::CreateRootSignature(rtRootDesc);
+
+    D3D12_HIT_GROUP_DESC defGroup{};
+    defGroup.HitGroupExport = L"DefaultHitGroup";
+    defGroup.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+    defGroup.ClosestHitShaderImport = L"closestHit";
+
+    RTPipelineDesc rtPipeDesc{};
+    rtPipeDesc.hitGroups.push_back(defGroup);
+    rtPipeDesc.libraryBytecodes.push_back({"Shaders/AtmosphereRT.dxil"});
+    rtPipeDesc.globalRootSig = mRTRootSig;
+
+    mRTPipeline = ResourceFactory::CreateRTPipeline(rtPipeDesc);
+
+    ShaderTableDesc stDesc{};
+    stDesc.pipeline = mRTPipeline.get();
+    stDesc.rayGen = {L"rayGen"};
+    stDesc.missShaders.push_back({L"miss"});
+    mShaderTable =  ResourceFactory::CreateShaderTable(stDesc);
 }
 
 void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> models) {
-    std::array<float, 4> mClearColour = { 
-        0.05f,
-        0.10f,
-        0.20f,
-        1.0f
-    };
+    // std::array<float, 4> mClearColour = { 
+    //     0.05f,
+    //     0.10f,
+    //     0.20f,
+    //     1.0f
+    // };
 
     auto* colourTarget = manager.GetRenderTarget(L"Scene Color");
-    auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
+    // auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
     GraphicsCommands::BeginLabel(PIX_COLOR(0, 128, 255), "Atmosphere pass");
 
     glm::mat4x4 transform = glm::scale({1.f}, glm::vec3{mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius});
-    tlasPtr->AddInstance(*mBlas.get(), 0, 0xFF, glm::mat4x3(transform));
+    tlasPtr->AddInstance(*mBlas.get(), 1, 0xFF, glm::mat4x3(transform));
     GraphicsCommands::RebuildTLAS(*tlasPtr);
 
-    GraphicsCommands::TransitionDSV(
-        *depthTarget, depthTarget->GetState(),
-        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    GraphicsCommands::TransitionRTV(
+        *colourTarget, colourTarget->GetState(),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
     );
+    GraphicsCommands::BindRaytracingPipeline(*mRTPipeline);
+    GraphicsCommands::BindComputeSRV(0, tlasPtr->GetSRV());
+    GraphicsCommands::BindUAV(1, colourTarget->GetResource()->GetGPUVirtualAddress());
+    GraphicsCommands::DispatchRays(*mShaderTable, colourTarget->GetWidth(), colourTarget->GetHeight());
+    // GraphicsCommands::TransitionDSV(
+    //     *depthTarget, depthTarget->GetState(),
+    //     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    // );
 
 
-    std::array<RenderTarget*, 1> targets = {
-        colourTarget
-    };
-    GraphicsCommands::BindRenderTargets(targets);
-    GraphicsCommands::BindViewport(
-        0.f,
-        0.f,
-        static_cast<float>(manager.GetWidth()),
-        static_cast<float>(manager.GetHeight()),
-        0.f,
-        1.f
-    );
-    GraphicsCommands::BindScissorRect(
-        0,
-        0,
-        static_cast<int>(manager.GetWidth()),
-        static_cast<int>(manager.GetHeight())
-    );
-    GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-    GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
-    GraphicsCommands::SetGraphicsConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
-    GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
-    GraphicsCommands::BindVertexBuffer(*mModel.primitives[0].vertexBuffer.get());
-    GraphicsCommands::BindIndexBuffer(*mModel.primitives[0].indexBuffer.get());
-    GraphicsCommands::DrawIndexed(mModel.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
+    // std::array<RenderTarget*, 1> targets = {
+    //     colourTarget
+    // };
+    // GraphicsCommands::BindRenderTargets(targets);
+    // GraphicsCommands::BindViewport(
+    //     0.f,
+    //     0.f,
+    //     static_cast<float>(manager.GetWidth()),
+    //     static_cast<float>(manager.GetHeight()),
+    //     0.f,
+    //     1.f
+    // );
+    // GraphicsCommands::BindScissorRect(
+    //     0,
+    //     0,
+    //     static_cast<int>(manager.GetWidth()),
+    //     static_cast<int>(manager.GetHeight())
+    // );
+    // GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    // GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
+    // GraphicsCommands::SetGraphicsConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
+    // GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
+    // GraphicsCommands::BindVertexBuffer(*mModel.primitives[0].vertexBuffer.get());
+    // GraphicsCommands::BindIndexBuffer(*mModel.primitives[0].indexBuffer.get());
+    // GraphicsCommands::DrawIndexed(mModel.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
     GraphicsCommands::EndLabel();
 }
 

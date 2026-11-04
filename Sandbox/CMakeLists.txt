@@ -127,6 +127,15 @@ add_hlsl_shader(
     INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
 )
 
+add_hlsl_shader( 
+    TARGET GemStoneShaders
+    NAME AtmosphereRT
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/AtmosphereRT.hlsl"
+    ENTRY 
+    PROFILE lib_6_6
+    INCLUDE_DIRECTORIES "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
 add_dependencies(Sandbox GemStoneShaders)
 
 add_custom_command(TARGET Sandbox POST_BUILD

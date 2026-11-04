@@ -9,6 +9,7 @@
 #include "Graphics/GraphicsCommands.h"
 #include "Graphics/DXR/AccelerationStructs.h"
 #include "Graphics/Model.h"
+#include "Graphics/DXR/RaytracingPipeline.h"
 
 #define CHECK_CONTEXT(OUTPUT)     \
     if (!sContextPtr) {  \
@@ -33,6 +34,8 @@ namespace GEM{
         static std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const GraphicsPipelineDescription& desc);
        
         static std::unique_ptr<ComputePipeline> CreateComputePipeline(std::shared_ptr<const RootSignature> rootSignature, ShaderBytecode shaderModule, std::wstring name);
+
+        static std::unique_ptr<RaytracingPipeline> CreateRTPipeline(const RTPipelineDesc& desc);
 
         /// @brief This creates a root signature
         /// @param desc the description of the root signature
@@ -209,7 +212,13 @@ namespace GEM{
         static std::unique_ptr<BLAS> CreateBLAS(const Primitive& primitive, std::wstring name, bool opaque);
     
         static std::unique_ptr<TLAS> CreateTLAS(UINT maxInstances); 
+
+        static std::unique_ptr<ShaderTable> CreateShaderTable(const ShaderTableDesc& desc);
+
     private:
+        static UINT ComputeLocalArgsSize(const std::vector<D3D12_ROOT_PARAMETER>& params);
+        static UINT ComputeLocalArgsSize(const RaytracingPipeline& pipeline, const std::wstring& exportName);
+
         static GraphicsContext* sContextPtr;
     };
 }

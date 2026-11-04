@@ -115,6 +115,19 @@ void GraphicsCommands::DispatchCompute(const UINT& countX, const UINT& countY, c
     commandList->Dispatch(countX, countY, countZ);
 }
 
+void GraphicsCommands::DispatchRays(ShaderTable& shaderTable, UINT width, UINT height) {
+    CHECK_CONTEXT
+
+    auto* commandList = sContextPtr->mCommandList.Get();
+    D3D12_DISPATCH_RAYS_DESC desc{};
+    shaderTable.FillDispatchDesc(desc);
+    desc.Width = width;
+    desc.Height = height;
+    desc.Depth = 1;
+
+    commandList->DispatchRays(&desc);
+}
+
 void GraphicsCommands::BindViewport(const float& x1, const float& y1, const float& x2, const float& y2, const float& minDepth, const float& maxDepth) {
     CHECK_CONTEXT
 
@@ -168,6 +181,13 @@ void GraphicsCommands::BindComputePipeline(ComputePipeline& pipeline){
     commandList->SetPipelineState(pipeline.mPipelineState.Get());
 }
 
+void GraphicsCommands::BindRaytracingPipeline(RaytracingPipeline& pipeline) {
+    CHECK_CONTEXT
+    auto* commandList = sContextPtr->mCommandList.Get();
+    commandList->SetComputeRootSignature(pipeline.mGlobalRootSig->Get());
+    commandList->SetPipelineState1(pipeline.mStateObject.Get());
+}
+
 void GraphicsCommands::SetGraphicsConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address) {
     CHECK_CONTEXT
     auto* commandList = sContextPtr->mCommandList.Get();
@@ -184,6 +204,15 @@ void GraphicsCommands::BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HAN
     CHECK_CONTEXT
 
     sContextPtr->mCommandList->SetGraphicsRootDescriptorTable(
+        rootParameterIndex,
+        descriptor
+    );
+}
+
+void GraphicsCommands::BindComputeSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor) {
+    CHECK_CONTEXT
+
+    sContextPtr->mCommandList->SetComputeRootDescriptorTable(
         rootParameterIndex,
         descriptor
     );

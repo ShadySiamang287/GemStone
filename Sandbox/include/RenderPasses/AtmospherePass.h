@@ -21,6 +21,7 @@ public:
 
 private:
     std::shared_ptr<GEM::RootSignature> mRootSig; 
+    std::shared_ptr<GEM::RootSignature> mRTRootSig;
     std::unique_ptr<GEM::GraphicsPipeline> mPipeline;
     GEM::ConstantBuffer<GEM::FrameData>* mFrameDataBuffer = nullptr;
     std::unique_ptr<GEM::ConstantBuffer<AtmosphereData>> mAtmosphereDataBuffer = nullptr;
@@ -30,5 +31,7 @@ private:
 
     GEM::Model mModel;
     std::unique_ptr<GEM::BLAS> mBlas = nullptr;
+    std::unique_ptr<GEM::RaytracingPipeline> mRTPipeline = nullptr;
+    std::unique_ptr<GEM::ShaderTable> mShaderTable = nullptr;
     GEM::TLAS* tlasPtr;
 };

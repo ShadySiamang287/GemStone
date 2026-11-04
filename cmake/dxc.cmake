@@ -13,7 +13,7 @@ function(add_hlsl_shader)
         "INCLUDE_DIRS;DEPENDS;OPTIONS"
     )
 
-    foreach(required TARGET NAME SOURCE ENTRY PROFILE)
+    foreach(required TARGET NAME SOURCE PROFILE)
         if(NOT ARG_${required})
             message(FATAL_ERROR
                 "add_hlsl_shader requires ${required}"
@@ -34,6 +34,11 @@ function(add_hlsl_shader)
         list(APPEND include_arguments -I "${include_dir}")
     endforeach()
 
+    set(entry_arguments)
+    if(ARG_ENTRY)
+        set(entry_arguments -E "${ARG_ENTRY}")
+    endif()
+
     add_custom_command(
         OUTPUT "${output}"
 
@@ -44,7 +49,7 @@ function(add_hlsl_shader)
             "${ARG_SOURCE}"
             ${include_arguments}
             -T "${ARG_PROFILE}"
-            -E "${ARG_ENTRY}"
+            ${entry_arguments}
             ${ARG_OPTIONS}
             -Fo "${output}"
             -Zi

@@ -11,13 +11,19 @@ namespace GEM {
     class RootSignature {
     public:
     
-    ID3D12RootSignature* Get() const noexcept {
+    ID3D12RootSignature* Get() const {
         return mSignature.Get();
+    }
+
+    UINT GetLocalArgsSize() const {
+        return mLocalArgsSize;
     }
     
     private:
         RootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>&& signature) : mSignature(std::move(signature)) {}
         
+        UINT mLocalArgsSize = 0;
+
         Microsoft::WRL::ComPtr<ID3D12RootSignature> mSignature;
         friend class ResourceFactory;
     };

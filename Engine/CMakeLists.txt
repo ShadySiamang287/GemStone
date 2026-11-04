@@ -25,6 +25,7 @@ target_sources(Engine PRIVATE
     src/Core/Input.cpp
     src/ImGui/ImGuiContext.cpp
     src/Graphics/DXR/AccelerationStructs.cpp
+    src/Graphics/DXR/RaytracingPipeline.cpp
 )
 
 target_include_directories(Engine

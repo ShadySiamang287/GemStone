@@ -129,6 +129,97 @@ std::unique_ptr<ComputePipeline> ResourceFactory::CreateComputePipeline(std::sha
 	return std::unique_ptr<ComputePipeline>(pipeline);
 }
 
+std::unique_ptr<RaytracingPipeline> ResourceFactory::CreateRTPipeline(const RTPipelineDesc& desc){
+	CHECK_CONTEXT(nullptr);
+
+	RaytracingPipeline* pipeline = new RaytracingPipeline();
+
+	std::vector<D3D12_STATE_SUBOBJECT> subobjects;
+	// prevent reshuffling
+	size_t totalSize = desc.libraryBytecodes.size() + desc.hitGroups.size() + (2 * desc.localRootSigs.size()) + 3;
+	subobjects.reserve(totalSize);
+
+	// Libraries
+	for (auto& bytecode : desc.libraryBytecodes) {
+		D3D12_DXIL_LIBRARY_DESC libraryDesc = {};
+		libraryDesc.DXILLibrary = bytecode.GetBytecode();
+		libraryDesc.NumExports = 0;
+		libraryDesc.pExports = nullptr;
+
+		subobjects.push_back(
+			{D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &libraryDesc}
+		);
+	}
+
+	// Hit Groups
+	for (const auto& hitgroup : desc.hitGroups) {
+		subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, &hitgroup});
+	}
+
+	//Global Hit Groups
+	D3D12_GLOBAL_ROOT_SIGNATURE globalRootDesc = {};
+	globalRootDesc.pGlobalRootSignature = desc.globalRootSig->Get();
+	subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, &globalRootDesc});
+	pipeline->mGlobalRootSig = desc.globalRootSig;
+
+	//Local Root sigs
+	std::vector<D3D12_LOCAL_ROOT_SIGNATURE> localRootDescs(desc.localRootSigs.size());
+	std::vector<size_t> localRootIndices(desc.localRootSigs.size());
+
+	for (int i = 0; i < desc.localRootSigs.size(); i++) {
+		localRootDescs[i].pLocalRootSignature = desc.localRootSigs[i].rootSignature->Get();
+		localRootIndices[i] = subobjects.size();
+
+		subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &localRootDescs[i]});
+	}
+
+	std::vector<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION> associations(desc.localRootSigs.size());
+	std::vector<std::vector<LPCWSTR>> exportPointers(desc.localRootSigs.size());
+
+	for (int i = 0; i < desc.localRootSigs.size(); i++) {
+		const auto& exports = desc.localRootSigs[i].exports;
+
+		exportPointers[i].reserve(exports.size());
+        for (const auto& name : exports){
+            exportPointers[i].push_back(name.c_str());
+		}
+
+        associations[i].pSubobjectToAssociate = &subobjects[localRootIndices[i]];
+
+        associations[i].NumExports = static_cast<UINT>(exportPointers[i].size());
+
+        associations[i].pExports = exportPointers[i].data();
+
+        subobjects.push_back({
+            D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION,
+            &associations[i]
+        });
+	}
+
+	// Raytracing shader config
+	D3D12_RAYTRACING_SHADER_CONFIG shaderConfig = {};
+	shaderConfig.MaxPayloadSizeInBytes = sizeof(HitPayload);
+	shaderConfig.MaxAttributeSizeInBytes = 8; //uhh idk if this is right
+
+	subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &shaderConfig});
+
+	// pipeline config
+	D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfig = {};
+	pipelineConfig.MaxTraceRecursionDepth = desc.maxRecursionDepth;
+
+	subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, &pipelineConfig});
+
+	// Actually create the state object
+	D3D12_STATE_OBJECT_DESC objDesc = {};
+	objDesc.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE;
+	objDesc.NumSubobjects = static_cast<UINT>(subobjects.size());
+	objDesc.pSubobjects = subobjects.data();
+
+	THROW_IF_FAILED(sContextPtr->mDevice->CreateStateObject(&objDesc, IID_PPV_ARGS(&pipeline->mStateObject)));
+
+	return std::unique_ptr<RaytracingPipeline>(pipeline);
+}
+
 std::shared_ptr<RootSignature> ResourceFactory::CreateRootSignature(const RootSignatureDesc& desc){
 	CHECK_CONTEXT(nullptr);
 
@@ -172,7 +263,10 @@ std::shared_ptr<RootSignature> ResourceFactory::CreateRootSignature(const RootSi
 
 	THROW_IF_FAILED(signature->SetName(desc.name.c_str()));
 
-	return std::shared_ptr<RootSignature>(new RootSignature(std::move(signature)));
+	auto* rootSignature = new RootSignature(std::move(signature));
+	rootSignature->mLocalArgsSize = ComputeLocalArgsSize(desc.parameters);
+
+	return std::shared_ptr<RootSignature>(rootSignature);
 }
 
 std::unique_ptr<VertexBuffer> ResourceFactory::CreateVertexBuffer(std::span<Vertex> vertices) {
@@ -577,6 +671,146 @@ std::unique_ptr<TLAS> ResourceFactory::CreateTLAS(UINT maxInstances) {
 	tlas->GetResource()->SetName(L"TLAS Buffer");
 
 	return std::unique_ptr<TLAS>(tlas);
+}
+
+std::unique_ptr<ShaderTable> ResourceFactory::CreateShaderTable(const ShaderTableDesc& desc) {
+	ShaderTable* table = new ShaderTable();
+
+	auto Align = [](UINT v, UINT a) {return (v + a) - 1 & ~(a - 1);};
+
+	if (!desc.pipeline){
+		throw std::runtime_error("ShaderTaleDesc: pipeline is null!");
+	}
+
+	const RaytracingPipeline& pipeline = *desc.pipeline;
+    constexpr UINT idSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+
+
+	Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> props;
+	pipeline.mStateObject.As(&props);
+
+	auto identifier = [&](const std::wstring& name) -> const void* {
+		return props->GetShaderIdentifier(name.c_str());   // nullptr if the export doesn't exist
+	};
+
+    auto validate = [&](const ShaderRecordDesc& r) {
+        if (!identifier(r.exportName)) {
+            throw std::runtime_error("Shader table: unknown export in pipeline");
+		}
+
+		UINT expected = ComputeLocalArgsSize(pipeline, r.exportName);
+		if (r.localArgs.size() != expected) {
+			throw std::runtime_error("Invalid local root signature");
+		}
+    };
+
+    // 2. Stride = largest record in the table, aligned to 32
+    auto strideOf = [&](const std::vector<ShaderRecordDesc>& recs) {
+        UINT stride = 0;
+        for (const auto& r : recs) {
+            validate(r);
+            stride = std::max(stride, Align(idSize + (UINT)r.localArgs.size(), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT));
+        }
+        return stride;
+    };
+
+	if (desc.rayGen.exportName.empty()){
+        throw std::runtime_error("Shader table: no ray generation shader");
+	}
+    if (desc.missShaders.empty()) {
+        throw std::runtime_error("Shader table: at least one miss shader required");
+	}
+
+	TableLayout rayGen, miss, hit, callable;
+	validate(desc.rayGen);
+    rayGen.stride = rayGen.size = Align(idSize + (UINT)desc.rayGen.localArgs.size(), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+	rayGen.count = 1;
+
+	UINT cursor = rayGen.offset + rayGen.size;
+
+    auto place = [&](TableLayout& t, const std::vector<ShaderRecordDesc>& recs) {
+        if (recs.empty()) return;
+        t.stride = strideOf(recs);
+        t.count  = (UINT)recs.size();
+        t.size   = t.stride * t.count;
+        t.offset = Align(cursor, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+        cursor   = t.offset + t.size;
+    };
+
+	place(miss, desc.missShaders);
+    place(hit, desc.hitGroups);
+
+	const UINT totalSize = cursor;
+
+	D3D12_RESOURCE_DESC bufDesc = CD3DX12_RESOURCE_DESC::Buffer(totalSize);
+    D3D12MA::ALLOCATION_DESC allocDesc = {};
+    allocDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+	THROW_IF_FAILED(sContextPtr->mAllocator->CreateResource(
+		&allocDesc, &bufDesc, D3D12_RESOURCE_STATE_GENERIC_READ, 
+		nullptr, &table->mAllocation, IID_NULL, nullptr
+	))
+
+	uint8_t* data = nullptr;
+    D3D12_RANGE noRead = { 0, 0 };
+	auto hr = table->mAllocation->GetResource()->Map(0, &noRead, reinterpret_cast<void**>(&data));
+	if (FAILED(hr)) {
+        table->mAllocation->Release();
+        throw std::runtime_error("Shader table: map failed");
+	}
+	memset(data, 0, totalSize); 
+
+	auto writeRecord = [&](uint8_t* dst, const ShaderRecordDesc& r) {
+        memcpy(dst, props->GetShaderIdentifier(r.exportName.c_str()), idSize);
+        if (!r.localArgs.empty())
+            memcpy(dst + idSize, r.localArgs.data(), r.localArgs.size());
+    };
+    auto writeTable = [&](const TableLayout& t, const std::vector<ShaderRecordDesc>& recs) {
+        for (UINT i = 0; i < t.count; ++i)
+            writeRecord(data + t.offset + i * t.stride, recs[i]);
+    };
+
+    writeRecord(data + rayGen.offset, desc.rayGen);
+    writeTable(miss, desc.missShaders);
+    writeTable(hit, desc.hitGroups);
+
+    table->mAllocation->GetResource()->Unmap(0, nullptr);
+
+    // 6. Hand the result to the ShaderTable (private ctor, so no make_unique)
+    table->mRayGen   = { rayGen.offset,   rayGen.size,   rayGen.stride,   rayGen.count };
+    table->mMiss     = { miss.offset,     miss.size,     miss.stride,     miss.count };
+    table->mHit      = { hit.offset,      hit.size,      hit.stride,      hit.count };
+    return std::unique_ptr<ShaderTable>(table);
+}
+
+UINT ResourceFactory::ComputeLocalArgsSize(const std::vector<D3D12_ROOT_PARAMETER>& params)
+{
+
+	auto Align = [](UINT v, UINT a) {return (v + a) - 1 & ~(a - 1);};
+
+    UINT offset = 0;
+    for (const auto& p : params) {
+        switch (p.ParameterType) {
+        case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+            offset += p.Constants.Num32BitValues * 4;
+            break;
+        case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+        case D3D12_ROOT_PARAMETER_TYPE_CBV:
+        case D3D12_ROOT_PARAMETER_TYPE_SRV:
+        case D3D12_ROOT_PARAMETER_TYPE_UAV:
+            offset = Align(offset, 8) + 8;
+            break;
+        }
+    }
+    return offset;
+}
+
+UINT ResourceFactory::ComputeLocalArgsSize(const RaytracingPipeline& pipeline, const std::wstring& exportName) {
+    for (const auto& assoc : pipeline.mLocalRootSigs) {
+        if (std::find(assoc.exports.begin(), assoc.exports.end(), exportName) != assoc.exports.end())
+            return assoc.rootSignature->GetLocalArgsSize();
+    }
+    return 0; // no local root signature
 }
 
 GraphicsContext* ResourceFactory::sContextPtr = nullptr;
