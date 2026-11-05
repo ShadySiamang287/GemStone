@@ -136,7 +136,7 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
         D3D12_RESOURCE_STATE_UNORDERED_ACCESS
     );
     GraphicsCommands::BindRaytracingPipeline(*mRTPipeline);
-    GraphicsCommands::BindComputeSRV(0, tlasPtr->GetSRV());
+    GraphicsCommands::BindComputeSRV(0, tlasPtr->GetResource()->GetGPUVirtualAddress());
     GraphicsCommands::BindUAV(1, colourTarget->GetResource()->GetGPUVirtualAddress());
     GraphicsCommands::DispatchRays(*mShaderTable, colourTarget->GetWidth(), colourTarget->GetHeight());
     // GraphicsCommands::TransitionDSV(
