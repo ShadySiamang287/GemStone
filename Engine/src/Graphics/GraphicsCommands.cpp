@@ -209,13 +209,14 @@ void GraphicsCommands::BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HAN
     );
 }
 
-void GraphicsCommands::BindComputeSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor) {
+void GraphicsCommands::BindComputeSRV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address) {
     CHECK_CONTEXT
 
-    sContextPtr->mCommandList->SetComputeRootDescriptorTable(
-        rootParameterIndex,
-        descriptor
-    );
+        //sContextPtr->mCommandList->SetComputeRootDescriptorTable(
+        //    rootParameterIndex,
+        //    descriptor
+        //);
+        sContextPtr->mCommandList->SetComputeRootShaderResourceView(rootParameterIndex, address);
 }
 
 void GraphicsCommands::BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address){
@@ -357,7 +358,6 @@ void GraphicsCommands::BeginLabel(uint32_t colour, std::string string) {
     CHECK_CONTEXT   
     auto* commandList = sContextPtr->mCommandList.Get();
     PIXBeginEvent(commandList, colour, string.c_str());
-
 }
 
 void GraphicsCommands::EndLabel() {
