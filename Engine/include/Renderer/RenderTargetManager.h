@@ -16,11 +16,11 @@ namespace GEM{
 
         void Resize(UINT width, UINT height);
 
-        UINT GetWidth() const noexcept {
+        UINT GetWidth() const {
             return mWidth;
         }
 
-        UINT GetHeight() const noexcept {
+        UINT GetHeight() const {
             return mHeight;
         }
 
@@ -33,11 +33,11 @@ namespace GEM{
         );
         DepthTarget& CreateDepthTarget(std::wstring name, UINT width, UINT height);
 
-        RenderTarget* GetRenderTarget(std::wstring_view name) noexcept;
-        DepthTarget* GetDepthTarget(std::wstring_view name) noexcept;
+        RenderTarget* GetRenderTarget(std::wstring_view name);
+        DepthTarget* GetDepthTarget(std::wstring_view name);
 
-        const RenderTarget* GetRenderTarget(std::wstring_view name) const noexcept;
-        const DepthTarget* GetDepthTarget(std::wstring_view name) const noexcept;
+        const RenderTarget* GetRenderTarget(std::wstring_view name) const;
+        const DepthTarget* GetDepthTarget(std::wstring_view name) const;
 
     private:
         static constexpr UINT sMaxRenderTargets = 16;
@@ -47,10 +47,12 @@ namespace GEM{
         UINT AcquireDSVSlot();
         UINT AcquireSRVSlot();
 
-        D3D12_CPU_DESCRIPTOR_HANDLE GetRTVHandle(UINT slot) const noexcept;
-        D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle(UINT slot) const noexcept;
-        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUHandle(UINT slot) const noexcept;
-        D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUHandle(UINT slot) const noexcept;
+        D3D12_CPU_DESCRIPTOR_HANDLE GetRTVHandle(UINT slot) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE GetDSVHandle(UINT slot) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUHandle(UINT slot) const;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUHandle(UINT slot) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE GetUAVCPUHandle(UINT slot) const;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetUAVGPUHandle(UINT slot) const;
 
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRTVHeap;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mDSVHeap;

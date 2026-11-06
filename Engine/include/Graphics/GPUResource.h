@@ -84,9 +84,15 @@ namespace GEM{
             return mState;
         }
 
+        D3D12_GPU_DESCRIPTOR_HANDLE GetUAV() const {
+            return mUAVGPU;
+        }
+
     protected:
         D3D12_RESOURCE_DESC mDescription{};
         D3D12_RESOURCE_STATES mState = D3D12_RESOURCE_STATE_COMMON;
+        D3D12_GPU_DESCRIPTOR_HANDLE mUAVGPU{};
+        D3D12_CPU_DESCRIPTOR_HANDLE mUAVCPU{};
 
         friend class ResourceFactory;
         friend class RenderTargetManager;

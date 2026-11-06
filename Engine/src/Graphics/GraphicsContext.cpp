@@ -293,13 +293,25 @@ UINT GraphicsContext::AllocateSRVSlot() {
 	return mNextSRVSlot++;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE GraphicsContext::GetSRVCPUHandle(UINT slot) const noexcept {
+D3D12_CPU_DESCRIPTOR_HANDLE GraphicsContext::GetSRVCPUHandle(UINT slot) const {
 	D3D12_CPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetCPUDescriptorHandleForHeapStart();
 	handle.ptr += static_cast<SIZE_T>(slot) * mSRVDescriptorSize;
 	return handle;
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE GraphicsContext::GetSRVGPUHandle(UINT slot) const noexcept {
+D3D12_GPU_DESCRIPTOR_HANDLE GraphicsContext::GetSRVGPUHandle(UINT slot) const {
+	D3D12_GPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetGPUDescriptorHandleForHeapStart();
+	handle.ptr += static_cast<UINT64>(slot) * mSRVDescriptorSize;
+	return handle;
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE GraphicsContext::GetUAVCPUHandle(UINT slot) const {
+	D3D12_CPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetCPUDescriptorHandleForHeapStart();
+	handle.ptr += static_cast<SIZE_T>(slot) * mSRVDescriptorSize;
+	return handle;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE GraphicsContext::GetUAVGPUHandle(UINT slot) const {
 	D3D12_GPU_DESCRIPTOR_HANDLE handle = mSRVHeap->GetGPUDescriptorHandleForHeapStart();
 	handle.ptr += static_cast<UINT64>(slot) * mSRVDescriptorSize;
 	return handle;

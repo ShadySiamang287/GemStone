@@ -29,19 +29,21 @@ namespace GEM{
         D3D12_CPU_DESCRIPTOR_HANDLE GetImGuiSRVCPUHandle() const;
         D3D12_GPU_DESCRIPTOR_HANDLE GetImGuiSRVGPUHandle() const;
 
-        UINT GetWidth() const noexcept {
+        UINT GetWidth() const {
             return mWidth;
         }
 
-        UINT GetHeight() const noexcept {
+        UINT GetHeight() const {
             return mHeight;
         }
 
         void Resize(UINT width, UINT height);
 
         UINT AllocateSRVSlot();
-        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUHandle(UINT slot) const noexcept;
-        D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUHandle(UINT slot) const noexcept;
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPUHandle(UINT slot) const;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRVGPUHandle(UINT slot) const;
+        D3D12_CPU_DESCRIPTOR_HANDLE GetUAVCPUHandle(UINT slot) const;
+        D3D12_GPU_DESCRIPTOR_HANDLE GetUAVGPUHandle(UINT slot) const;
 
     private:
         void CreateFactory();

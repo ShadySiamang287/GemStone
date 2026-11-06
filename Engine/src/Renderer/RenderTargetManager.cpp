@@ -168,6 +168,7 @@ RenderTarget& RenderTargetManager::CreateRenderTarget(
 
 	const UINT rtvSlot = AcquireRTVSlot();
 	const UINT srvSlot = AcquireSRVSlot();
+	const UINT uavSlot = AcquireSRVSlot();
 
 	RenderTarget target;
 	target.mDescription = CD3DX12_RESOURCE_DESC::Tex2D(
@@ -227,6 +228,22 @@ RenderTarget& RenderTargetManager::CreateRenderTarget(
 		&srvDesc,
 		target.mSRVCPU
 	);
+
+	target.mUAVCPU = GetUAVCPUHandle(uavSlot);
+	target.mUAVGPU = GetUAVGPUHandle(uavSlot);
+
+	D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+	uavDesc.Format = format;
+	uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	uavDesc.Texture2D.MipSlice = 0;
+
+	mContext.mDevice->CreateUnorderedAccessView(
+		target.GetResource(),
+		nullptr,
+		&uavDesc,
+		target.mUAVCPU
+	);
+
 	target.GetResource()->SetName(name.c_str());
 	auto [iterator, inserted] = mRenderTargets.emplace(std::move(name), std::move(target));
 
@@ -325,22 +342,22 @@ DepthTarget& RenderTargetManager::CreateDepthTarget(std::wstring name, UINT widt
 	return iterator->second;
 }
 
-RenderTarget* RenderTargetManager::GetRenderTarget(std::wstring_view name) noexcept {
+RenderTarget* RenderTargetManager::GetRenderTarget(std::wstring_view name) {
 	auto iterator = mRenderTargets.find(std::wstring(name));
 	return iterator == mRenderTargets.end() ? nullptr : &iterator->second;
 }
 
-DepthTarget* RenderTargetManager::GetDepthTarget(std::wstring_view name) noexcept {
+DepthTarget* RenderTargetManager::GetDepthTarget(std::wstring_view name) {
 	auto iterator = mDepthTargets.find(std::wstring(name));
 	return iterator == mDepthTargets.end() ? nullptr : &iterator->second;
 }
 
-const RenderTarget* RenderTargetManager::GetRenderTarget(std::wstring_view name) const noexcept {
+const RenderTarget* RenderTargetManager::GetRenderTarget(std::wstring_view name) const {
 	auto iterator = mRenderTargets.find(std::wstring(name));
 	return iterator == mRenderTargets.end() ? nullptr : &iterator->second;
 }
 
-const DepthTarget* RenderTargetManager::GetDepthTarget(std::wstring_view name) const noexcept {
+const DepthTarget* RenderTargetManager::GetDepthTarget(std::wstring_view name) const {
 	auto iterator = mDepthTargets.find(std::wstring(name));
 	return iterator == mDepthTargets.end() ? nullptr : &iterator->second;
 }
@@ -365,22 +382,30 @@ UINT RenderTargetManager::AcquireSRVSlot() {
 	return mContext.AllocateSRVSlot();
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetRTVHandle(UINT slot) const noexcept {
+D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetRTVHandle(UINT slot) const {
 	D3D12_CPU_DESCRIPTOR_HANDLE handle = mRTVHeap->GetCPUDescriptorHandleForHeapStart();
 	handle.ptr += static_cast<SIZE_T>(slot) * mRTVDescriptorSize;
 	return handle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetDSVHandle(UINT slot) const noexcept {
+D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetDSVHandle(UINT slot) const {
 	D3D12_CPU_DESCRIPTOR_HANDLE handle = mDSVHeap->GetCPUDescriptorHandleForHeapStart();
 	handle.ptr += static_cast<SIZE_T>(slot) * mDSVDescriptorSize;
 	return handle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetSRVCPUHandle(UINT slot) const noexcept {
+D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetSRVCPUHandle(UINT slot) const  {
 	return mContext.GetSRVCPUHandle(slot);
 }
 
-D3D12_GPU_DESCRIPTOR_HANDLE RenderTargetManager::GetSRVGPUHandle(UINT slot) const noexcept {
+D3D12_GPU_DESCRIPTOR_HANDLE RenderTargetManager::GetSRVGPUHandle(UINT slot) const {
 	return mContext.GetSRVGPUHandle(slot);
+}
+
+D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetManager::GetUAVCPUHandle(UINT slot) const {
+	return mContext.GetUAVCPUHandle(slot);
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE RenderTargetManager::GetUAVGPUHandle(UINT slot) const {
+	return mContext.GetUAVGPUHandle(slot);
 }
