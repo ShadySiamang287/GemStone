@@ -87,7 +87,16 @@ void GraphicsCommands::EndFrame() {
     
     sContextPtr->mCommandQueue->ExecuteCommandLists(1, commandLists);
     
-    THROW_IF_FAILED(sContextPtr->mSwapChain->Present(0, 0));
+    auto result = sContextPtr->mSwapChain->Present(0, 0);
+    if (FAILED(result)){
+        if (result == DXGI_ERROR_DEVICE_REMOVED ||
+            result == DXGI_ERROR_DEVICE_RESET ||
+            result == DXGI_ERROR_DEVICE_HUNG)
+        {
+            sContextPtr->DeviceRemoved();
+        }
+        THROW_IF_FAILED(result);
+    }
     
     sContextPtr->mFrameIndex = sContextPtr->mSwapChain->GetCurrentBackBufferIndex();
     
@@ -168,8 +177,8 @@ void GraphicsCommands::BindIndexBuffer(const IndexBuffer& buffer) {
 void GraphicsCommands::BindGraphicsPipeline(GraphicsPipeline& pipeline) {
     CHECK_CONTEXT
     auto* commandList = sContextPtr->mCommandList.Get();
-    commandList->SetGraphicsRootSignature(pipeline.mRootSignature.Get());
     commandList->SetPipelineState(pipeline.mPipelineState.Get());
+    commandList->SetGraphicsRootSignature(pipeline.mRootSignature.Get());
     commandList->IASetPrimitiveTopology(pipeline.mTopology);
 }
 
@@ -177,15 +186,15 @@ void GraphicsCommands::BindComputePipeline(ComputePipeline& pipeline){
     CHECK_CONTEXT
     auto* commandList = sContextPtr->mCommandList.Get();
 
-    commandList->SetComputeRootSignature(pipeline.mRootSignature.Get());
     commandList->SetPipelineState(pipeline.mPipelineState.Get());
+    commandList->SetComputeRootSignature(pipeline.mRootSignature.Get());
 }
 
 void GraphicsCommands::BindRaytracingPipeline(RaytracingPipeline& pipeline) {
     CHECK_CONTEXT
     auto* commandList = sContextPtr->mCommandList.Get();
-    commandList->SetComputeRootSignature(pipeline.mGlobalRootSig->Get());
     commandList->SetPipelineState1(pipeline.mStateObject.Get());
+    commandList->SetComputeRootSignature(pipeline.mGlobalRootSig->Get());
 }
 
 void GraphicsCommands::SetGraphicsConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address) {
@@ -224,6 +233,15 @@ void GraphicsCommands::BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRES
 
     auto* commandList = sContextPtr->mCommandList.Get();
     commandList->SetComputeRootUnorderedAccessView(rootParameterIndex, address);
+}
+
+void GraphicsCommands::BindUAV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor) {
+    CHECK_CONTEXT
+
+    sContextPtr->mCommandList->SetComputeRootDescriptorTable(
+        rootParameterIndex,
+        descriptor
+    );
 }
 
 void GraphicsCommands::TransitionRTV(RenderTarget& renderTarget, D3D12_RESOURCE_STATES before, D3D12_RESOURCE_STATES after) {
@@ -534,7 +552,7 @@ void GraphicsCommands::RebuildTLAS(TLAS& tlas){
 
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
     inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-    inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD; // must match CreateTLAS
+    inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE; // must match CreateTLAS
     inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     inputs.NumDescs = count;
     inputs.InstanceDescs = count > 0

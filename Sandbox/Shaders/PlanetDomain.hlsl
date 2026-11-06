@@ -31,6 +31,7 @@ cbuffer PlanetData : register(b1)
     float ridgeRoughness;
     float persistence;
     float terrainStrength;
+    uint vertexCount;
 }
 
 float3 SurfacePoint(float3 dir)

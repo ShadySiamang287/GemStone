@@ -103,7 +103,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::DispatchCompute(threadXCount, 1, 1);
     GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
     GraphicsCommands::RebuildBLAS(*mBLAS.get());
-    tlasPtr->AddInstance(*mBLAS.get(), 0, 0xFF, glm::mat4x3(1.f));
+    tlasPtr->AddInstance(*mBLAS.get(), 0, 0x01, glm::mat4x3(1.f));
     GraphicsCommands::RebuildTLAS(*tlasPtr);
     GraphicsCommands::EndLabel();
 
@@ -242,7 +242,7 @@ void DeferredPass::GenerateBaseMesh() {
         ResourceFactory::CreateVertexBuffer(vertices),
         ResourceFactory::CreateIndexBuffer(indices)
     });
-
+    mPlanetData.vertexCount = vertices.size();
     mBLAS = ResourceFactory::CreateBLAS(mPlanetMesh.primitives[0], L"Planet BLAS", true);
 
 }

@@ -10,6 +10,8 @@ namespace GEM{
         /// @brief This is needed since the fence needs to empty before the objects are destroyed.
         ~GraphicsContext();
 
+        void DeviceRemoved();
+
         ID3D12Device* GetDevice() const {
             return mDevice.Get();
         }

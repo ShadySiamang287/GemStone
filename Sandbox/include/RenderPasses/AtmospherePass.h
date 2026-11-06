@@ -34,4 +34,6 @@ private:
     std::unique_ptr<GEM::RaytracingPipeline> mRTPipeline = nullptr;
     std::unique_ptr<GEM::ShaderTable> mShaderTable = nullptr;
     GEM::TLAS* tlasPtr;
+
+    bool mRaytrace = true;
 };

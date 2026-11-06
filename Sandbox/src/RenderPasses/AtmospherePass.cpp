@@ -94,6 +94,9 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
 
     rtRootDesc.parameters.push_back(outputRT);
 
+    rtRootDesc.parameters.push_back(frameDataParameter);
+    rtRootDesc.parameters.push_back(atmosphereData);
+
     mRTRootSig = ResourceFactory::CreateRootSignature(rtRootDesc);
 
     D3D12_HIT_GROUP_DESC defGroup{};
@@ -112,69 +115,78 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
     stDesc.pipeline = mRTPipeline.get();
     stDesc.rayGen = {L"rayGen"};
     stDesc.missShaders.push_back({L"miss"});
+    stDesc.hitGroups.push_back({L"DefaultHitGroup"});
     mShaderTable =  ResourceFactory::CreateShaderTable(stDesc);
 }
 
 void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> models) {
-    // std::array<float, 4> mClearColour = { 
-    //     0.05f,
-    //     0.10f,
-    //     0.20f,
-    //     1.0f
-    // };
+    std::array<float, 4> mClearColour = { 
+        0.05f,
+        0.10f,
+        0.20f,
+        1.0f
+    };
 
     auto* colourTarget = manager.GetRenderTarget(L"Scene Color");
-    // auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
+    auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
     GraphicsCommands::BeginLabel(PIX_COLOR(0, 128, 255), "Atmosphere pass");
 
-    glm::mat4x4 transform = glm::scale({1.f}, glm::vec3{mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius});
-    tlasPtr->AddInstance(*mBlas.get(), 1, 0xFF, glm::mat4x3(transform));
-    GraphicsCommands::RebuildTLAS(*tlasPtr);
+    if (mRaytrace) {
 
-    GraphicsCommands::TransitionRTV(
-        *colourTarget, colourTarget->GetState(),
-        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-    );
-    GraphicsCommands::BindRaytracingPipeline(*mRTPipeline);
-    GraphicsCommands::BindComputeSRV(0, tlasPtr->GetResource()->GetGPUVirtualAddress());
-    GraphicsCommands::BindUAV(1, colourTarget->GetResource()->GetGPUVirtualAddress());
-    GraphicsCommands::DispatchRays(*mShaderTable, colourTarget->GetWidth(), colourTarget->GetHeight());
-    // GraphicsCommands::TransitionDSV(
-    //     *depthTarget, depthTarget->GetState(),
-    //     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-    // );
+        glm::mat4x4 transform = glm::scale({1.f}, glm::vec3{mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius});
+        tlasPtr->AddInstance(*mBlas.get(), 1, 0x02, glm::mat4x3(transform));
+        GraphicsCommands::RebuildTLAS(*tlasPtr);
+
+        GraphicsCommands::TransitionRTV(
+            *colourTarget, colourTarget->GetState(),
+            D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+        );
+        GraphicsCommands::BindRaytracingPipeline(*mRTPipeline);
+        GraphicsCommands::BindComputeSRV(0, tlasPtr->GetResource()->GetGPUVirtualAddress());
+        GraphicsCommands::BindUAV(1, colourTarget->GetUAV());
+        GraphicsCommands::SetComputeConstantBufferView(2, mFrameDataBuffer->GetAddress());
+        GraphicsCommands::SetComputeConstantBufferView(3, mAtmosphereDataBuffer->GetAddress());
+        GraphicsCommands::DispatchRays(*mShaderTable, colourTarget->GetWidth(), colourTarget->GetHeight());
+    } else {
+        GraphicsCommands::TransitionDSV(
+            *depthTarget, depthTarget->GetState(),
+            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+        );
 
 
-    // std::array<RenderTarget*, 1> targets = {
-    //     colourTarget
-    // };
-    // GraphicsCommands::BindRenderTargets(targets);
-    // GraphicsCommands::BindViewport(
-    //     0.f,
-    //     0.f,
-    //     static_cast<float>(manager.GetWidth()),
-    //     static_cast<float>(manager.GetHeight()),
-    //     0.f,
-    //     1.f
-    // );
-    // GraphicsCommands::BindScissorRect(
-    //     0,
-    //     0,
-    //     static_cast<int>(manager.GetWidth()),
-    //     static_cast<int>(manager.GetHeight())
-    // );
-    // GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-    // GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
-    // GraphicsCommands::SetGraphicsConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
-    // GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
-    // GraphicsCommands::BindVertexBuffer(*mModel.primitives[0].vertexBuffer.get());
-    // GraphicsCommands::BindIndexBuffer(*mModel.primitives[0].indexBuffer.get());
-    // GraphicsCommands::DrawIndexed(mModel.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
+        std::array<RenderTarget*, 1> targets = {
+            colourTarget
+        };
+        GraphicsCommands::BindRenderTargets(targets);
+        GraphicsCommands::BindViewport(
+            0.f,
+            0.f,
+            static_cast<float>(manager.GetWidth()),
+            static_cast<float>(manager.GetHeight()),
+            0.f,
+            1.f
+        );
+        GraphicsCommands::BindScissorRect(
+            0,
+            0,
+            static_cast<int>(manager.GetWidth()),
+            static_cast<int>(manager.GetHeight())
+        );
+        GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+        GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
+        GraphicsCommands::SetGraphicsConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
+        GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
+        GraphicsCommands::BindVertexBuffer(*mModel.primitives[0].vertexBuffer.get());
+        GraphicsCommands::BindIndexBuffer(*mModel.primitives[0].indexBuffer.get());
+        GraphicsCommands::DrawIndexed(mModel.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
+    }
     GraphicsCommands::EndLabel();
 }
 
 void AtmospherePass::OnImGuiRender() {
     ImGui::Begin("Atmosphere Data");
+    
+    ImGui::Checkbox("Ray trace?", &mRaytrace);
     ImGui::ColorEdit3("Planet Atmosphere", &mAtmosphereData.atmosphereColour.r);
     ImGui::SliderFloat("Planet Radius", &mAtmosphereData.planetRadius, 0.1f, 100.f);
     ImGui::SliderFloat("Atmosphere Radius", &mAtmosphereData.atmosphereRadius, 0.1f, 100.f);

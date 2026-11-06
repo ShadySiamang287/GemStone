@@ -139,6 +139,8 @@ std::unique_ptr<RaytracingPipeline> ResourceFactory::CreateRTPipeline(const RTPi
 	size_t totalSize = desc.libraryBytecodes.size() + desc.hitGroups.size() + (2 * desc.localRootSigs.size()) + 3;
 	subobjects.reserve(totalSize);
 
+	std::vector<D3D12_DXIL_LIBRARY_DESC> libraryDescs;
+
 	// Libraries
 	for (auto& bytecode : desc.libraryBytecodes) {
 		D3D12_DXIL_LIBRARY_DESC libraryDesc = {};
@@ -146,6 +148,7 @@ std::unique_ptr<RaytracingPipeline> ResourceFactory::CreateRTPipeline(const RTPi
 		libraryDesc.NumExports = 0;
 		libraryDesc.pExports = nullptr;
 
+		libraryDescs.push_back(libraryDesc);
 		subobjects.push_back(
 			{D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, &libraryDesc}
 		);
@@ -173,27 +176,26 @@ std::unique_ptr<RaytracingPipeline> ResourceFactory::CreateRTPipeline(const RTPi
 		subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, &localRootDescs[i]});
 	}
 
-	std::vector<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION> associations(desc.localRootSigs.size());
+	std::vector<std::vector<std::wstring>> persistentExports(desc.localRootSigs.size());
 	std::vector<std::vector<LPCWSTR>> exportPointers(desc.localRootSigs.size());
+	std::vector<D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION> associations(desc.localRootSigs.size());
 
 	for (int i = 0; i < desc.localRootSigs.size(); i++) {
-		const auto& exports = desc.localRootSigs[i].exports;
+		persistentExports[i] = desc.localRootSigs[i].exports; 
 
-		exportPointers[i].reserve(exports.size());
-        for (const auto& name : exports){
-            exportPointers[i].push_back(name.c_str());
+		exportPointers[i].reserve(persistentExports[i].size());
+		for (const auto& stringObj : persistentExports[i]) {
+			exportPointers[i].push_back(stringObj.c_str());
 		}
 
-        associations[i].pSubobjectToAssociate = &subobjects[localRootIndices[i]];
+		associations[i].pSubobjectToAssociate = &subobjects[localRootIndices[i]];
+		associations[i].NumExports = static_cast<UINT>(exportPointers[i].size());
+		associations[i].pExports = exportPointers[i].data();
 
-        associations[i].NumExports = static_cast<UINT>(exportPointers[i].size());
-
-        associations[i].pExports = exportPointers[i].data();
-
-        subobjects.push_back({
-            D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION,
-            &associations[i]
-        });
+		subobjects.push_back({
+			D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION,
+			&associations[i]
+		});
 	}
 
 	// Raytracing shader config
@@ -509,7 +511,7 @@ std::unique_ptr<BLAS> ResourceFactory::CreateBLAS(const Primitive& primitive, st
 		sContextPtr->mAllocator->CreateResource(
 			&defaultDesc,
 			&scratchDesc,
-			D3D12_RESOURCE_STATE_COMMON,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 			nullptr,
 			blas->mScratchAllocation.GetAddressOf(),
 			IID_NULL,
@@ -613,7 +615,7 @@ std::unique_ptr<TLAS> ResourceFactory::CreateTLAS(UINT maxInstances) {
 		sContextPtr->mAllocator->CreateResource(
 			&defaultDesc,
 			&scratchDesc,
-			D3D12_RESOURCE_STATE_COMMON,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
 			nullptr,
 			tlas->mScratchAllocation.GetAddressOf(),
 			IID_NULL,
@@ -676,7 +678,7 @@ std::unique_ptr<TLAS> ResourceFactory::CreateTLAS(UINT maxInstances) {
 std::unique_ptr<ShaderTable> ResourceFactory::CreateShaderTable(const ShaderTableDesc& desc) {
 	ShaderTable* table = new ShaderTable();
 
-	auto Align = [](UINT v, UINT a) {return (v + a) - 1 & ~(a - 1);};
+	auto Align = [](UINT v, UINT a) {return (v + a - 1) & ~(a - 1);};
 
 	if (!desc.pipeline){
 		throw std::runtime_error("ShaderTaleDesc: pipeline is null!");
@@ -721,8 +723,9 @@ std::unique_ptr<ShaderTable> ResourceFactory::CreateShaderTable(const ShaderTabl
         throw std::runtime_error("Shader table: at least one miss shader required");
 	}
 
-	TableLayout rayGen, miss, hit, callable;
+	TableLayout rayGen{}, miss{}, hit{};
 	validate(desc.rayGen);
+	rayGen.offset = 0;
     rayGen.stride = rayGen.size = Align(idSize + (UINT)desc.rayGen.localArgs.size(), D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 	rayGen.count = 1;
 
@@ -730,7 +733,7 @@ std::unique_ptr<ShaderTable> ResourceFactory::CreateShaderTable(const ShaderTabl
 
     auto place = [&](TableLayout& t, const std::vector<ShaderRecordDesc>& recs) {
         if (recs.empty()) return;
-        t.stride = strideOf(recs);
+        t.stride = Align(strideOf(recs), 64);
         t.count  = (UINT)recs.size();
         t.size   = t.stride * t.count;
         t.offset = Align(cursor, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
@@ -740,7 +743,7 @@ std::unique_ptr<ShaderTable> ResourceFactory::CreateShaderTable(const ShaderTabl
 	place(miss, desc.missShaders);
     place(hit, desc.hitGroups);
 
-	const UINT totalSize = cursor;
+	const UINT totalSize = Align(cursor, 64);
 
 	D3D12_RESOURCE_DESC bufDesc = CD3DX12_RESOURCE_DESC::Buffer(totalSize);
     D3D12MA::ALLOCATION_DESC allocDesc = {};

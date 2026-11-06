@@ -6,7 +6,6 @@ static constexpr int rayTypeCount = 1;
 
 void TLAS::AddInstance(BLAS& targetBlas, UINT instanceID, UINT mask, glm::mat4x3 transform) {
     if (mInstanceDescs.size() >= mCapacity) return;
-
     constexpr UINT kRayTypes = 1; // change if you have e.g. primary + shadow hit groups
 
     D3D12_RAYTRACING_INSTANCE_DESC desc = {};

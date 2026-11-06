@@ -83,6 +83,19 @@ void RenderTargetManager::Resize(UINT width, UINT height) {
 			&srvDesc,
 			target.mSRVCPU
 		);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+		uavDesc.Format = target.mDescription.Format;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		uavDesc.Texture2D.MipSlice = 0;
+
+		mContext.mDevice->CreateUnorderedAccessView(
+			target.GetResource(),
+			nullptr,
+			&uavDesc,
+			target.mUAVCPU
+		);
+
 		target.GetResource()->SetName(name.c_str());
 	}
 

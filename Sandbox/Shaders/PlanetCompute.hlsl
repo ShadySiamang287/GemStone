@@ -10,6 +10,7 @@ cbuffer PlanetData : register(b1)
 	float ridgeRoughness;
 	float persistence;
 	float terrainStrength;
+	uint vertexCount;
 }
 
 float3 SurfacePoint(float3 dir)
@@ -52,6 +53,10 @@ float ShapeTerrain(float rawHeight)
 [numthreads(256, 1, 1)]
 void PlanetCS(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
+    if (dispatchThreadID.x >= vertexCount) {
+		return;
+	}
+
 	VertexInput vert = vertexBuffer[dispatchThreadID.x];
 	float3 direction = normalize(vert.position);
 	float noise = FractalNoise(direction, roughness, ridgeRoughness, persistence);

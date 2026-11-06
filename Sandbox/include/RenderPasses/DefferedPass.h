@@ -12,6 +12,7 @@ struct PlanetData {
     float rigedRoughness = 0.8f;
     float persistence = 0.425f;
     float terrainStrength = 0.3f;
+    UINT vertexCount = 0;
 };
 
 struct TesselationData {

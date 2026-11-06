@@ -86,6 +86,8 @@ namespace GEM {
         static void BindComputeSRV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
 
         static void BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address);
+        static void BindUAV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor);
+
 
         static void SetGraphicsConstantBufferView(const UINT& index, D3D12_GPU_VIRTUAL_ADDRESS address);
 

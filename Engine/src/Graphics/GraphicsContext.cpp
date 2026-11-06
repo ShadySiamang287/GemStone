@@ -4,6 +4,40 @@ using namespace GEM;
 
 using namespace Microsoft::WRL;
 
+const wchar_t* GetBreadcrumbOperationName(
+    D3D12_AUTO_BREADCRUMB_OP operation)
+{
+    switch (operation)
+    {
+        case D3D12_AUTO_BREADCRUMB_OP_DRAWINSTANCED:
+            return L"DrawInstanced";
+
+        case D3D12_AUTO_BREADCRUMB_OP_DRAWINDEXEDINSTANCED:
+            return L"DrawIndexedInstanced";
+
+        case D3D12_AUTO_BREADCRUMB_OP_DISPATCH:
+            return L"Dispatch";
+
+        case D3D12_AUTO_BREADCRUMB_OP_COPYBUFFERREGION:
+            return L"CopyBufferRegion";
+
+        case D3D12_AUTO_BREADCRUMB_OP_COPYTEXTUREREGION:
+            return L"CopyTextureRegion";
+
+        case D3D12_AUTO_BREADCRUMB_OP_RESOURCEBARRIER:
+            return L"ResourceBarrier";
+
+        case D3D12_AUTO_BREADCRUMB_OP_EXECUTEINDIRECT:
+            return L"ExecuteIndirect";
+
+        case D3D12_AUTO_BREADCRUMB_OP_DISPATCHRAYS:
+            return L"DispatchRays";
+
+        default:
+            return L"Other / Unhandled operation";
+    }
+}
+
 GraphicsContext::GraphicsContext(HWND window, UINT width, UINT height)
     : mWidth(width), mHeight(height) {
 	CreateFactory();
@@ -28,14 +62,115 @@ GraphicsContext::~GraphicsContext() {
 	}
 }
 
+void GraphicsContext::DeviceRemoved(){
+	const HRESULT reason = mDevice->GetDeviceRemovedReason();
+	
+	std::wcout << L"\n========== GPU DEVICE REMOVED ==========\n";
+    std::wcout << L"Device removal reason: 0x"
+               << std::hex << static_cast<unsigned int>(reason)
+               << std::dec << L"\n";
+
+
+    Microsoft::WRL::ComPtr<ID3D12DeviceRemovedExtendedData1> dred;
+
+    if (FAILED(mDevice->QueryInterface(IID_PPV_ARGS(&dred))))
+    {
+        std::wcout << L"DRED interface unavailable.\n";
+        return;
+    }
+
+	    // Breadcrumbs
+    D3D12_DRED_AUTO_BREADCRUMBS_OUTPUT1 breadcrumbs{};
+
+    if (SUCCEEDED(dred->GetAutoBreadcrumbsOutput1(&breadcrumbs)))
+    {
+        auto* node = breadcrumbs.pHeadAutoBreadcrumbNode;
+
+        while (node)
+        {
+            std::wcout << L"\nCommand List: "
+                       << (node->pCommandListDebugNameW
+                           ? node->pCommandListDebugNameW
+                           : L"Unknown")
+                       << L"\n";
+
+            const UINT completed = node->pLastBreadcrumbValue
+                ? *node->pLastBreadcrumbValue
+                : 0;
+
+            const UINT total = node->BreadcrumbCount;
+
+            std::wcout << L"Completed operations: "
+                       << completed << L" / " << total << L"\n";
+
+            if (node->pCommandHistory && completed < total)
+            {
+                const auto operation = node->pCommandHistory[completed];
+
+                std::wcout << L"Last operation name: "
+                           << GetBreadcrumbOperationName(operation) << L"\n";
+            }
+
+            node = node->pNext;
+        }
+    }
+
+    // Page faults
+    D3D12_DRED_PAGE_FAULT_OUTPUT1 pageFault{};
+
+    if (SUCCEEDED(dred->GetPageFaultAllocationOutput1(&pageFault)))
+    {
+        std::wcout << L"\nGPU Page Fault VA: 0x"
+                   << std::hex << pageFault.PageFaultVA
+                   << std::dec << L"\n";
+
+        auto* allocation = pageFault.pHeadExistingAllocationNode;
+
+        while (allocation)
+        {
+            std::wcout << L"Existing allocation: "
+                       << (allocation->ObjectNameW
+                           ? allocation->ObjectNameW
+                           : L"Unknown")
+                       << L"\n";
+
+            allocation = allocation->pNext;
+        }
+
+        allocation = pageFault.pHeadRecentFreedAllocationNode;
+
+        while (allocation)
+        {
+            std::wcout << L"Recently freed allocation: "
+                       << (allocation->ObjectNameW
+                           ? allocation->ObjectNameW
+                           : L"Unknown")
+                       << L"\n";
+
+            allocation = allocation->pNext;
+        }
+    }
+
+    std::wcout << L"\n========================================\n";
+}
+
+
 void GraphicsContext::CreateFactory() {
 	UINT factoryFlags = 0;
 
-	ComPtr<ID3D12Debug> debugController;
+	ComPtr<ID3D12Debug1> debugController;
 	#ifdef _DEBUG
 	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
 		debugController->EnableDebugLayer();
+		debugController->SetEnableGPUBasedValidation(false);
 		factoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+	}
+	
+	ComPtr<ID3D12DeviceRemovedExtendedDataSettings1> dredSettings;
+	if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&dredSettings)))) {
+		dredSettings->SetAutoBreadcrumbsEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		dredSettings->SetPageFaultEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
+		dredSettings->SetBreadcrumbContextEnablement(D3D12_DRED_ENABLEMENT_FORCED_ON);
 	}
 	#endif
 
@@ -47,7 +182,7 @@ void GraphicsContext::CreateFactory() {
 }
 
 void GraphicsContext::CreateAdaptor() {
-		for (UINT index = 0;; index++) {
+	for (UINT index = 0;; index++) {
 		ComPtr<IDXGIAdapter4> adapter;
 
 		HRESULT result = mFactory->EnumAdapterByGpuPreference(index, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&adapter));

@@ -9,12 +9,23 @@ void ShaderTable::FillDispatchDesc(D3D12_DISPATCH_RAYS_DESC& desc){
     desc.RayGenerationShaderRecord.StartAddress = base + mRayGen.offset;
     desc.RayGenerationShaderRecord.SizeInBytes  = mRayGen.size;
 
-    // Tables: start address + total size + stride between records
-    desc.MissShaderTable.StartAddress  = base + mMiss.offset;
-    desc.MissShaderTable.SizeInBytes   = mMiss.stride * mMiss.count;
-    desc.MissShaderTable.StrideInBytes = mMiss.stride;
+    // Miss table
+    if (mMiss.count > 0)
+    {
+        desc.MissShaderTable.StartAddress = base + mMiss.offset;
 
-    desc.HitGroupTable.StartAddress  = base + mHit.offset;
-    desc.HitGroupTable.SizeInBytes   = mHit.stride * mHit.count;
-    desc.HitGroupTable.StrideInBytes = mHit.stride;
+        desc.MissShaderTable.SizeInBytes = mMiss.stride * mMiss.count;
+
+        desc.MissShaderTable.StrideInBytes = mMiss.stride;
+    }
+
+    // Hit group table
+    if (mHit.count > 0)
+    {
+        desc.HitGroupTable.StartAddress = base + mHit.offset;
+
+        desc.HitGroupTable.SizeInBytes = mHit.stride * mHit.count;
+
+        desc.HitGroupTable.StrideInBytes = mHit.stride;
+    }
 }
