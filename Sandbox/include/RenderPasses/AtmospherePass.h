@@ -8,8 +8,8 @@ struct AtmosphereData{
     glm::vec3 atmosphereColour = {0.15, 0.4, 1.0};
     float planetRadius = 10.f;
     float atmosphereRadius = 14.f;
-    float densityFalloff = 7.0f;
-    float strengthMultiplier = 1.25f;
+    float densityFalloff = 5.5f;
+    float strengthMultiplier = 0.25f;
     int steps = 3;
 };
 

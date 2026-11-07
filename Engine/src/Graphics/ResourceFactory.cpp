@@ -136,10 +136,11 @@ std::unique_ptr<RaytracingPipeline> ResourceFactory::CreateRTPipeline(const RTPi
 
 	std::vector<D3D12_STATE_SUBOBJECT> subobjects;
 	// prevent reshuffling
-	size_t totalSize = desc.libraryBytecodes.size() + desc.hitGroups.size() + (2 * desc.localRootSigs.size()) + 3;
+	size_t totalSize = desc.libraryBytecodes.size() + desc.hitGroups.size() + (2 * desc.localRootSigs.size()) + 4;
 	subobjects.reserve(totalSize);
 
 	std::vector<D3D12_DXIL_LIBRARY_DESC> libraryDescs;
+	libraryDescs.reserve(desc.libraryBytecodes.size());
 
 	// Libraries
 	for (auto& bytecode : desc.libraryBytecodes) {
@@ -204,6 +205,13 @@ std::unique_ptr<RaytracingPipeline> ResourceFactory::CreateRTPipeline(const RTPi
 	shaderConfig.MaxAttributeSizeInBytes = 8; //uhh idk if this is right
 
 	subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, &shaderConfig});
+
+	D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION shaderConfigAssociation{};
+	shaderConfigAssociation.pSubobjectToAssociate = &subobjects[subobjects.size() - 1];
+	shaderConfigAssociation.NumExports = 0;
+	shaderConfigAssociation.pExports = nullptr;
+
+	subobjects.push_back({D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, &shaderConfigAssociation});
 
 	// pipeline config
 	D3D12_RAYTRACING_PIPELINE_CONFIG pipelineConfig = {};

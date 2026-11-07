@@ -72,7 +72,7 @@ namespace GEM{
         Microsoft::WRL::ComPtr<ID3D12Fence> mFence;
 
         static constexpr UINT sFrameCount = 2;
-        static constexpr UINT sMaxSRVs = 24;
+        static constexpr UINT sMaxSRVs = 36;
         static constexpr UINT sImGuiSRVSlot = sMaxSRVs - 1;
         Microsoft::WRL::ComPtr<IDXGISwapChain3> mSwapChain;
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mRTVHeap;

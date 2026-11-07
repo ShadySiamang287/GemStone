@@ -15,7 +15,7 @@ namespace GEM{
         std::vector<D3D12_HIT_GROUP_DESC> hitGroups;
         std::shared_ptr<RootSignature> globalRootSig;
         std::vector<LocalRootSigAssociation> localRootSigs;
-        UINT maxRecursionDepth = 0;
+        UINT maxRecursionDepth = 1;
     };
 
     // uhh i have no idea what needs to go in here );

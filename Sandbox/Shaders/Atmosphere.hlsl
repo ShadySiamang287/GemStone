@@ -96,7 +96,7 @@ float4 atmospherePS(VertexOutput vertIn) : SV_Target0{
         discard;
     }
 
-    float stepSize = pathLength / (float)4;
+    float stepSize = pathLength / (float)steps;
     float thickness = atmosphereRadius - planetRadius;
 
     float opticalDepth = 0.0;

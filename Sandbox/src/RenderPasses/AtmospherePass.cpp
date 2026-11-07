@@ -71,11 +71,19 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
     rtRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
     rtRootDesc.name = L"RT Root Sig";
 
+    D3D12_DESCRIPTOR_RANGE accelRange{};
+    accelRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    accelRange.NumDescriptors = 1;
+    accelRange.BaseShaderRegister = 0;
+    accelRange.RegisterSpace = 0;
+    accelRange.OffsetInDescriptorsFromTableStart = 0;
+
+
     D3D12_ROOT_PARAMETER accelParam{};
-    accelParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
+    accelParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     accelParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    accelParam.Descriptor.ShaderRegister = 0;
-    accelParam.Descriptor.RegisterSpace = 0;
+    accelParam.DescriptorTable.NumDescriptorRanges = 1;
+    accelParam.DescriptorTable.pDescriptorRanges = &accelRange;
 
     rtRootDesc.parameters.push_back(accelParam);
 
@@ -142,7 +150,7 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
             D3D12_RESOURCE_STATE_UNORDERED_ACCESS
         );
         GraphicsCommands::BindRaytracingPipeline(*mRTPipeline);
-        GraphicsCommands::BindComputeSRV(0, tlasPtr->GetResource()->GetGPUVirtualAddress());
+        GraphicsCommands::BindComputeSRV(0, tlasPtr->GetSRV());
         GraphicsCommands::BindUAV(1, colourTarget->GetUAV());
         GraphicsCommands::SetComputeConstantBufferView(2, mFrameDataBuffer->GetAddress());
         GraphicsCommands::SetComputeConstantBufferView(3, mAtmosphereDataBuffer->GetAddress());

@@ -43,31 +43,6 @@ struct Payload {
 [shader("raygeneration")]
 void rayGen() {
 
-    uint2 pixel = DispatchRaysIndex().xy;
-
-    RayDesc ray;
-    ray.Origin = float3(0.0, 0.0, -10.0);
-    ray.Direction = float3(0.0, 0.0, 1.0);
-    ray.TMin = 0.001;
-    ray.TMax = 1000.0;
-
-    Payload payload;
-    payload.hitT = 1e30;
-
-    TraceRay(
-        accelStructure,
-        RAY_FLAG_NONE,
-        0x01,
-        0,
-        1,
-        0,
-        ray,
-        payload
-    );
-
-    outputTexture[pixel] = float4(1, 0, 1, 1);
-    return;
-
     uint2 launchIndex = DispatchRaysIndex().xy;
     float2 dims = DispatchRaysDimensions().xy;
     float2 ndc = ((float2(launchIndex) + 0.5) / dims) * float2(2.0, -2.0) + float2(-1.0, 1.0);
@@ -77,53 +52,50 @@ void rayGen() {
     float3 rayDir = normalize(mul(invViewMatrix, float4(viewPos, 0.0)).xyz);
     float3 rayOrigin = mul(invViewMatrix, float4(0, 0, 0, 1)).xyz;
 
-    // RayDesc ray;
-    // ray.Origin = rayOrigin;
-    // ray.Direction = rayDir;
-    // ray.TMin = 0.0f;
-    // ray.TMax = 1e30f;
+    float tNear, tFar;
+    if (!RaySphere(rayOrigin, rayDir, atmosphereRadius, tNear, tFar)) {
+        return;
+    }
+
+    tNear = max(tNear, 0.0f);
+    if (tFar <= tNear) return;
+
+    RayDesc ray;
+    ray.Origin = rayOrigin;
+    ray.Direction = rayDir;
+    ray.TMin = tNear;
+    ray.TMax = tFar;
 
     Payload p;
-    p.hitT = 1e30f;
-    // outputTexture[launchIndex.xy] = float4(1, 0, 1, 1);
+    p.hitT = tFar;
     TraceRay(accelStructure, RAY_FLAG_NONE, 0x01, 0, 1, 0, ray, p);
 
-    return;
+    tFar = min(tFar, p.hitT);
 
-    // float tNear, tFar;
-    // if (!RaySphere(rayOrigin, rayDir, atmosphereRadius, tNear, tFar)) {
-    //     return;
-    // }
-    // tNear = max(tNear, 0.0f);
+    float pathLength = tFar - tNear;
+    if (pathLength <= 0.0) {
+        return;
+    }
 
-    // tFar = min(tFar, p.hitT);
+    float stepSize = pathLength / (float)steps;
+    float thickness = atmosphereRadius - planetRadius;
 
-    // float pathLength = tFar - tNear;
-    // if (pathLength <= 0.0) {
-    //     return;
-    // }
+    float opticalDepth = 0.0;
 
-    // float stepSize = pathLength / (float)steps;
-    // float thickness = atmosphereRadius - planetRadius;
+    for (int i = 0; i < steps; i++)
+    {
+        float3 samplePoint = rayOrigin + rayDir * (tNear + (i + 0.5) * stepSize);
 
-    // float opticalDepth = 0.0;
+        float altitude = saturate((length(samplePoint) - planetRadius) / thickness);
+        float density = exp(-altitude * densityFalloff);
 
-    // for (int i = 0; i < 1; i++)
-    // {
-    //     float3 samplePoint = rayOrigin + rayDir * (tNear + (i + 0.5) * stepSize);
+        opticalDepth += density * stepSize;
+    }
 
-    //     float altitude = saturate((length(samplePoint) - planetRadius) / thickness);
-    //     float density = exp(-altitude * densityFalloff);
+    float alpha = 1.0 - exp(-opticalDepth * strengthMultiplier);
+    float4 col = float4(atmosphereColour, alpha);
 
-    //     opticalDepth += density * stepSize;
-    // }
-
-    // float alpha = 1.0 - exp(-opticalDepth * strengthMultiplier);
-    // float4 col = float4(atmosphereColour, alpha);
-    // // return float4(atmosphereColour, alpha);
-
-    // // float3 col = float3(0.4, 0.6, 0.2);
-    // outputTexture[launchIndex.xy] = float4(lerp(outputTexture[launchIndex].rgb, col.rgb, col.a), 1.0);
+    outputTexture[launchIndex.xy] = float4(lerp(outputTexture[launchIndex].rgb, col.rgb, col.a), 1.0);
 }
 
 [shader("miss")]

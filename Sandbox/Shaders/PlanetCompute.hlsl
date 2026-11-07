@@ -60,7 +60,7 @@ void PlanetCS(uint3 dispatchThreadID : SV_DispatchThreadID)
 	VertexInput vert = vertexBuffer[dispatchThreadID.x];
 	float3 direction = normalize(vert.position);
 	float noise = FractalNoise(direction, roughness, ridgeRoughness, persistence);
-	float totalNoise = ShapeTerrain(noise);
+	float totalNoise = ShapeTerrain(noise) * terrainStrength;
 	float displacedRadius = max(radius, radius + totalNoise);
 	float3 displacedPosition = direction * displacedRadius;
 	vert.position = displacedPosition;

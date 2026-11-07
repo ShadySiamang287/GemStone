@@ -71,64 +71,63 @@ void BloomPass::Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> 
     mConstantBuffer->Upload(mData);
 
     GraphicsCommands::BeginLabel(PIX_COLOR(172, 123, 48), "Bloom Pass");
-    for (int i = 0; i < 3; i++){
-        GraphicsCommands::TransitionRTV(
-            *bloomPing, bloomPing->GetState(),
-            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-        );
-        GraphicsCommands::TransitionRTV(
-            *bloomPong, bloomPong->GetState(),
-            D3D12_RESOURCE_STATE_RENDER_TARGET
-        );
-        std::array<RenderTarget*, 1> targets = {
-            bloomPong
-        };
+    GraphicsCommands::TransitionRTV(
+        *bloomPing, bloomPing->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+    GraphicsCommands::TransitionRTV(
+        *bloomPong, bloomPong->GetState(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
+    std::array<RenderTarget*, 1> targets = {
+        bloomPong
+    };
 
-        GraphicsCommands::BindRenderTargets(targets);
-        GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-        GraphicsCommands::BindViewport(
-            0.f,
-            0.f,
-            static_cast<float>(manager.GetWidth()),
-            static_cast<float>(manager.GetHeight()),
-            0.f,
-            1.f
-        );
-        GraphicsCommands::BindScissorRect(
-            0,
-            0,
-            static_cast<int>(manager.GetWidth()),
-            static_cast<int>(manager.GetHeight())
-        );
-        GraphicsCommands::BindSRV(0, bloomPing->GetSRV());
-        GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
-            std::array<float, 4> clearColor = {
-            0.05f,
-            0.10f,
-            0.20f,
-            1.0f
-        };
-        GraphicsCommands::ClearRenderTarget(*bloomPong, clearColor.data());
-        GraphicsCommands::Draw(3, 1, 0, 0);
-        GraphicsCommands::TransitionRTV(
-            *bloomPing, bloomPing->GetState(),
-            D3D12_RESOURCE_STATE_RENDER_TARGET
-        );
-        GraphicsCommands::TransitionRTV(
-            *bloomPong, bloomPong->GetState(),
-            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-        );
-        GraphicsCommands::BindSRV(0, bloomPong->GetSRV());
-        targets = {
-            bloomPing
-        };
-        mData.horizontal = false;
-        mConstantBuffer->Upload(mData);
-        GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
+    GraphicsCommands::BindRenderTargets(targets);
+    GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    GraphicsCommands::BindViewport(
+        0.f,
+        0.f,
+        static_cast<float>(manager.GetWidth()),
+        static_cast<float>(manager.GetHeight()),
+        0.f,
+        1.f
+    );
+    GraphicsCommands::BindScissorRect(
+        0,
+        0,
+        static_cast<int>(manager.GetWidth()),
+        static_cast<int>(manager.GetHeight())
+    );
+    GraphicsCommands::BindSRV(0, bloomPing->GetSRV());
+    GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
+        std::array<float, 4> clearColor = {
+        0.05f,
+        0.10f,
+        0.20f,
+        1.0f
+    };
+    GraphicsCommands::ClearRenderTarget(*bloomPong, clearColor.data());
+    GraphicsCommands::Draw(3, 1, 0, 0);
+    GraphicsCommands::TransitionRTV(
+        *bloomPing, bloomPing->GetState(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
+    GraphicsCommands::TransitionRTV(
+        *bloomPong, bloomPong->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+    GraphicsCommands::BindSRV(0, bloomPong->GetSRV());
+    targets = {
+        bloomPing
+    };
+    mData.horizontal = false;
+    mConstantBuffer->Upload(mData);
+    GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
 
-        GraphicsCommands::BindRenderTargets(targets);
-        GraphicsCommands::Draw(3, 1, 0, 0);
-    }
+    GraphicsCommands::BindRenderTargets(targets);
+    GraphicsCommands::Draw(3, 1, 0, 0);
+
     GraphicsCommands::EndLabel();
 }
 

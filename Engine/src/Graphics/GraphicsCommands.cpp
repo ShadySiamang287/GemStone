@@ -218,14 +218,13 @@ void GraphicsCommands::BindSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HAN
     );
 }
 
-void GraphicsCommands::BindComputeSRV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address) {
+void GraphicsCommands::BindComputeSRV(UINT rootParameterIndex, D3D12_GPU_DESCRIPTOR_HANDLE descriptor) {
     CHECK_CONTEXT
 
-        //sContextPtr->mCommandList->SetComputeRootDescriptorTable(
-        //    rootParameterIndex,
-        //    descriptor
-        //);
-        sContextPtr->mCommandList->SetComputeRootShaderResourceView(rootParameterIndex, address);
+    sContextPtr->mCommandList->SetComputeRootDescriptorTable(
+        rootParameterIndex,
+        descriptor
+    );
 }
 
 void GraphicsCommands::BindUAV(UINT rootParameterIndex, D3D12_GPU_VIRTUAL_ADDRESS address){
