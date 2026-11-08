@@ -6,7 +6,7 @@
 namespace GEM{
     // this feels dumb right?
     class GEM_API BLAS : public GPUResource{
-    private:
+    protected:
         BLAS() {}
         std::vector<D3D12_RAYTRACING_GEOMETRY_DESC> mGeometries;
         std::vector<const Primitive*> mPrimitives;
@@ -15,6 +15,16 @@ namespace GEM{
         UINT64 mScratchSize = 0;
         
         std::wstring mName;
+
+        friend class ResourceFactory;
+        friend class GraphicsCommands;
+        friend class TLAS;
+    };
+
+    class GEM_API ProceduralBLAS : public BLAS{
+        ProceduralBLAS();
+
+        Microsoft::WRL::ComPtr<D3D12MA::Allocation> mAABBAllocation;
 
         friend class ResourceFactory;
         friend class GraphicsCommands;

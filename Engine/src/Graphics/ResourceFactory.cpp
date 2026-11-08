@@ -592,6 +592,124 @@ std::unique_ptr<BLAS> ResourceFactory::CreateBLAS(const Primitive& primitive, st
 	return std::unique_ptr<BLAS>(blas);
 }
 
+std::unique_ptr<ProceduralBLAS> ResourceFactory::CreateProceduralBLAS(const D3D12_RAYTRACING_AABB& aabb, std::wstring name, bool opaque){
+	CHECK_CONTEXT(nullptr)
+
+	ProceduralBLAS* blas = new ProceduralBLAS();
+
+
+	
+	D3D12_RAYTRACING_GEOMETRY_DESC geomDesc = {};
+	geomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+	geomDesc.AABBs.AABBCount = 0;
+	geomDesc.AABBs.AABBs.StartAddress = blas->mAABBAllocation->GetResource()->GetGPUVirtualAddress();
+	geomDesc.AABBs.AABBs.StrideInBytes = sizeof(D3D12_RAYTRACING_AABB);
+
+	if (opaque) {
+		geomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+	} else {
+		geomDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+	}
+	blas->mGeometries.push_back(geomDesc);
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS inputs = {};
+	inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+	inputs.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+	inputs.NumDescs = 1;
+	inputs.pGeometryDescs = &geomDesc;
+	inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+
+	D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO info;
+	sContextPtr->mDevice->GetRaytracingAccelerationStructurePrebuildInfo(&inputs, &info);
+
+	D3D12MA::ALLOCATION_DESC defaultDesc{};
+	defaultDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+	UINT64 scratchSize = std::max(info.ScratchDataSizeInBytes, info.UpdateScratchDataSizeInBytes);
+	blas->mScratchSize = scratchSize;
+
+	D3D12_RESOURCE_DESC scratchDesc = CD3DX12_RESOURCE_DESC::Buffer(scratchSize);
+	scratchDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	D3D12_RESOURCE_DESC resultDesc = CD3DX12_RESOURCE_DESC::Buffer(info.ResultDataMaxSizeInBytes);
+	resultDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+	THROW_IF_FAILED(
+		sContextPtr->mAllocator->CreateResource(
+			&defaultDesc,
+			&scratchDesc,
+			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			nullptr,
+			blas->mScratchAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		)
+	);
+	THROW_IF_FAILED(
+		sContextPtr->mAllocator->CreateResource(
+			&defaultDesc,
+			&resultDesc,
+			D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE,
+			nullptr,
+			blas->mAllocation.GetAddressOf(),
+			IID_NULL,
+			nullptr
+		)
+	);
+
+	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
+	asDesc.Inputs = inputs;
+	asDesc.DestAccelerationStructureData = blas->mAllocation->GetResource()->GetGPUVirtualAddress();
+	asDesc.ScratchAccelerationStructureData = blas->mScratchAllocation->GetResource()->GetGPUVirtualAddress();
+
+	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList) {
+        std::vector<D3D12_RESOURCE_BARRIER> preBarriers;
+		D3D12_RESOURCE_BARRIER preVertex = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.vertexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+		);
+
+
+		preBarriers.push_back(preVertex);
+
+		D3D12_RESOURCE_BARRIER preIndex = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.indexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_INDEX_BUFFER,
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+		);
+
+		preBarriers.push_back(preIndex);
+        commandList->ResourceBarrier(preBarriers.size(), preBarriers.data());
+		commandList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
+
+        std::vector<D3D12_RESOURCE_BARRIER> postBarriers;
+		D3D12_RESOURCE_BARRIER vertex = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.vertexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+		);
+
+		postBarriers.push_back(vertex);
+
+		D3D12_RESOURCE_BARRIER index = CD3DX12_RESOURCE_BARRIER::Transition(
+			primitive.indexBuffer->GetResource(),
+			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+			D3D12_RESOURCE_STATE_INDEX_BUFFER
+		);
+
+		postBarriers.push_back(index);
+
+		D3D12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::UAV(
+            blas->GetResource()
+        );
+        postBarriers.push_back(uavBarrier);
+		commandList->ResourceBarrier(postBarriers.size(), postBarriers.data());
+	});
+	blas->mAllocation->SetName(name.c_str());
+	return std::unique_ptr<ProceduralBLAS>(blas);
+}
+
 std::unique_ptr<TLAS> ResourceFactory::CreateTLAS(UINT maxInstances) {
 	TLAS* tlas = new TLAS();
 	tlas->mCapacity = maxInstances;
