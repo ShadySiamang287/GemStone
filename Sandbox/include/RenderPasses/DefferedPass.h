@@ -7,43 +7,48 @@
 using namespace GEM;
 
 struct PlanetData {
-    float radius = 10.f;
-    float roughness = 0.4f;
-    float rigedRoughness = 0.8f;
-    float persistence = 0.425f;
-    float terrainStrength = 0.3f;
-    UINT vertexCount = 0;
+	float radius = 10.f;
+	float roughness = 0.4f;
+	float rigedRoughness = 0.8f;
+	float persistence = 0.425f;
+	float terrainStrength = 0.3f;
+	UINT vertexCount = 0;
 };
 
 struct TesselationData {
-    float maxTess = 5.f;
-    float nearDist = 10.f;
-    float farDist = 70.f;
+	float maxTess = 5.f;
+	float nearDist = 10.f;
+	float farDist = 70.f;
 };
 
 class DeferredPass : public RenderPass {
 public:
-    DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tlas);
-    void Render(RenderTargetManager& manager, std::span<Model> models) override;
+	DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tlas);
+	void Render(RenderTargetManager& manager, std::span<Model> models) override;
 	void OnImGuiRender() override;
 
 private:
-    std::shared_ptr<RootSignature> mRootSig; 
-    std::shared_ptr<RootSignature> mComputeSig;
-    std::unique_ptr<GraphicsPipeline> mPipeline;
-    ConstantBuffer<FrameData>* mFrameDataBuffer = nullptr;
+	std::shared_ptr<RootSignature> mRootSig; 
+	std::shared_ptr<RootSignature> mComputeSig;
+	std::unique_ptr<GraphicsPipeline> mPipeline;
+	ConstantBuffer<FrameData>* mFrameDataBuffer = nullptr;
 	std::unique_ptr<ConstantBuffer<PlanetData>> mPlanetDataBuffer = nullptr;
 	std::unique_ptr<ConstantBuffer<TesselationData>> mTesselationDataBuffer = nullptr;
 
-    std::unique_ptr<ComputePipeline> mComputePipeline = nullptr;
-    std::unique_ptr<BLAS> mBLAS = nullptr;
-    TLAS* tlasPtr = nullptr;
+	std::unique_ptr<ComputePipeline> mComputePipeline = nullptr;
+	std::vector<std::unique_ptr<BLAS>> mBLASes;
+	TLAS* tlasPtr = nullptr;
 
-    PlanetData mPlanetData;
-    TesselationData mTesselationData;
+	PlanetData mPlanetData;
+	TesselationData mTesselationData;
 
-    std::array<float, 4> mClearColour;
+	std::array<float, 4> mClearColour;
+	int totalPlanetCount = 1;
 
-    Model mPlanetMesh;
-    void GenerateBaseMesh();
+	static constexpr int sMaxPlanets = 5;
+	int planetVertexCount = 0;
+	int planetIndexCount = 0;
+
+	Model mPlanetMesh;
+	void GenerateBaseMesh();
 };

@@ -271,6 +271,6 @@ void AtmospherePass::GenerateBaseMesh() {
         ResourceFactory::CreateIndexBuffer(indices)
     });
 
-    mBlas = ResourceFactory::CreateBLAS(mModel.primitives[0], L"Atmosphere BLAS", false);
+    mBlas = ResourceFactory::CreateBLAS(mModel.primitives[0], L"Atmosphere BLAS", false, 0, vertices.size(), 0, indices.size());
 
 }

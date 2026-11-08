@@ -465,7 +465,7 @@ std::unique_ptr<IndexBuffer> ResourceFactory::CreateIndexBuffer(std::span<uint32
 	return buffer;
 }
 
-std::unique_ptr<BLAS> ResourceFactory::CreateBLAS(const Primitive& primitive, std::wstring name, bool opaque) {
+std::unique_ptr<BLAS> ResourceFactory::CreateBLAS(const Primitive& primitive, std::wstring name, bool opaque, int startVertex, int vertexCount, int startIndex, int indexCount) {
 	CHECK_CONTEXT(nullptr)
 
 	BLAS* blas = new BLAS();
@@ -474,14 +474,14 @@ std::unique_ptr<BLAS> ResourceFactory::CreateBLAS(const Primitive& primitive, st
 
 	D3D12_RAYTRACING_GEOMETRY_DESC geomDesc = {};
 	geomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-	geomDesc.Triangles.VertexBuffer.StartAddress = primitive.vertexBuffer->GetResource()->GetGPUVirtualAddress();
+	geomDesc.Triangles.VertexBuffer.StartAddress = primitive.vertexBuffer->GetResource()->GetGPUVirtualAddress() + startVertex * sizeof(Vertex);
 	geomDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
 	geomDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-	geomDesc.Triangles.VertexCount = primitive.vertexBuffer->GetVertexCount();
+	geomDesc.Triangles.VertexCount = vertexCount;
 
-	geomDesc.Triangles.IndexBuffer = primitive.indexBuffer->GetResource()->GetGPUVirtualAddress();
+	geomDesc.Triangles.IndexBuffer = primitive.indexBuffer->GetResource()->GetGPUVirtualAddress() + startIndex * sizeof(UINT32);
 	geomDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-	geomDesc.Triangles.IndexCount = primitive.indexBuffer->GetIndexCount();
+	geomDesc.Triangles.IndexCount = indexCount;
 
 
 	geomDesc.Triangles.Transform3x4 = 0;
@@ -663,42 +663,42 @@ std::unique_ptr<ProceduralBLAS> ResourceFactory::CreateProceduralBLAS(const D3D1
 	asDesc.ScratchAccelerationStructureData = blas->mScratchAllocation->GetResource()->GetGPUVirtualAddress();
 
 	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList) {
-        std::vector<D3D12_RESOURCE_BARRIER> preBarriers;
-		D3D12_RESOURCE_BARRIER preVertex = CD3DX12_RESOURCE_BARRIER::Transition(
-			primitive.vertexBuffer->GetResource(),
-			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-		);
+  //      std::vector<D3D12_RESOURCE_BARRIER> preBarriers;
+		//D3D12_RESOURCE_BARRIER preVertex = CD3DX12_RESOURCE_BARRIER::Transition(
+		//	primitive.vertexBuffer->GetResource(),
+		//	D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
+		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+		//);
 
 
-		preBarriers.push_back(preVertex);
+		//preBarriers.push_back(preVertex);
 
-		D3D12_RESOURCE_BARRIER preIndex = CD3DX12_RESOURCE_BARRIER::Transition(
-			primitive.indexBuffer->GetResource(),
-			D3D12_RESOURCE_STATE_INDEX_BUFFER,
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-		);
+		//D3D12_RESOURCE_BARRIER preIndex = CD3DX12_RESOURCE_BARRIER::Transition(
+		//	primitive.indexBuffer->GetResource(),
+		//	D3D12_RESOURCE_STATE_INDEX_BUFFER,
+		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
+		//);
 
-		preBarriers.push_back(preIndex);
-        commandList->ResourceBarrier(preBarriers.size(), preBarriers.data());
+		//preBarriers.push_back(preIndex);
+  //      commandList->ResourceBarrier(preBarriers.size(), preBarriers.data());
 		commandList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
 
         std::vector<D3D12_RESOURCE_BARRIER> postBarriers;
-		D3D12_RESOURCE_BARRIER vertex = CD3DX12_RESOURCE_BARRIER::Transition(
-			primitive.vertexBuffer->GetResource(),
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-			D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
-		);
+		//D3D12_RESOURCE_BARRIER vertex = CD3DX12_RESOURCE_BARRIER::Transition(
+		//	primitive.vertexBuffer->GetResource(),
+		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		//	D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
+		//);
 
-		postBarriers.push_back(vertex);
+		//postBarriers.push_back(vertex);
 
-		D3D12_RESOURCE_BARRIER index = CD3DX12_RESOURCE_BARRIER::Transition(
-			primitive.indexBuffer->GetResource(),
-			D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-			D3D12_RESOURCE_STATE_INDEX_BUFFER
-		);
+		//D3D12_RESOURCE_BARRIER index = CD3DX12_RESOURCE_BARRIER::Transition(
+		//	primitive.indexBuffer->GetResource(),
+		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
+		//	D3D12_RESOURCE_STATE_INDEX_BUFFER
+		//);
 
-		postBarriers.push_back(index);
+		//postBarriers.push_back(index);
 
 		D3D12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::UAV(
             blas->GetResource()

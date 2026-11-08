@@ -99,11 +99,11 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::BindComputePipeline(*mComputePipeline.get());
     GraphicsCommands::BindUAV(0, mPlanetMesh.primitives[0].vertexBuffer->GetResource()->GetGPUVirtualAddress());
     GraphicsCommands::SetComputeConstantBufferView(1, mPlanetDataBuffer->GetAddress());
-    UINT threadXCount = (mPlanetMesh.primitives[0].vertexBuffer->GetVertexCount() + 256 - 1) / 256;
-    GraphicsCommands::DispatchCompute(threadXCount, 1, 1);
+    UINT threadXCount = (planetVertexCount + 256 - 1) / 256;
+    GraphicsCommands::DispatchCompute(threadXCount, totalPlanetCount, 1);
     GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-    GraphicsCommands::RebuildBLAS(*mBLAS.get());
-    tlasPtr->AddInstance(*mBLAS.get(), 0, 0x01, glm::mat4x3(1.f));
+    GraphicsCommands::RebuildBLAS(*mBLASes[0].get());
+    tlasPtr->AddInstance(*mBLASes[0].get(), 0, 0x01, glm::mat4x3(1.f));
     GraphicsCommands::RebuildTLAS(*tlasPtr);
     GraphicsCommands::EndLabel();
 
@@ -154,13 +154,14 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     );
     GraphicsCommands::BindVertexBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get());
     GraphicsCommands::BindIndexBuffer(*mPlanetMesh.primitives[0].indexBuffer.get());
-    GraphicsCommands::DrawIndexed(mPlanetMesh.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
+    GraphicsCommands::DrawIndexed(planetIndexCount, 1, 0, 0, 0);
 
     GraphicsCommands::EndLabel();
 }
 
 void DeferredPass::OnImGuiRender() {
     ImGui::Begin("Planet Pass");
+    ImGui::SliderInt("Planet Count", &totalPlanetCount, 1, 5);
     ImGui::SeparatorText("Planet Generation Settings");
     ImGui::SliderFloat("Radius", &mPlanetData.radius, 0.1f, 100.f);
     ImGui::SliderFloat("Roughness", &mPlanetData.roughness, 0.0f, 10.f);
@@ -188,61 +189,74 @@ void DeferredPass::GenerateBaseMesh() {
     constexpr float stackStep = std::numbers::pi_v<float> / static_cast<float>(stackCount);
 
     std::vector<GEM::Vertex> vertices;
-    vertices.reserve(stackCount * sectorCount);
-
-    for (int i = 0; i <= stackCount; i++) {
-        float stackAngle = (std::numbers::pi_v<float> / 2.f) - i * stackStep;
-        float xy = radius * std::cosf(stackAngle);
-        float z = radius * std::sinf(stackAngle);
-
-        for (int j = 0; j <= sectorCount; j++) {
-            GEM::Vertex vert;
-            float sectorAngle = j * sectorStep;
-            vert.position = {
-                xy * std::cosf(sectorAngle),
-                xy * std::sinf(sectorAngle),
-                z
-            };
-
-            vert.normal = {
-                vert.position.x * inverseRad,
-                vert.position.y * inverseRad,
-                vert.position.z * inverseRad,
-            };
-
-            vertices.push_back(vert);
-        }
-    }
-
+    vertices.reserve(stackCount * sectorCount * 5);
     std::vector<uint32_t> indices;
 
-    for (int i = 0; i < stackCount; i++) {
-        int k1 = i * (sectorCount + 1);
-        int k2 = k1 + sectorCount + 1;
+    int indexCount, vertexCount;
 
-        for (int j = 0; j < sectorCount; j++, k1++, k2++) {
-            if (i != 0) {
-                indices.push_back(k1);
-                indices.push_back(k2);
-                indices.push_back(k1 + 1);
+    for (int planetCount = 0; planetCount < sMaxPlanets; planetCount++) {
+        for (int i = 0; i <= stackCount; i++) {
+            float stackAngle = (std::numbers::pi_v<float> / 2.f) - i * stackStep;
+            float xy = radius * std::cosf(stackAngle);
+            float z = radius * std::sinf(stackAngle);
+
+            for (int j = 0; j <= sectorCount; j++) {
+                GEM::Vertex vert;
+                float sectorAngle = j * sectorStep;
+                vert.position = {
+                    xy * std::cosf(sectorAngle),
+                    xy * std::sinf(sectorAngle),
+                    z
+                };
+
+                vert.normal = {
+                    vert.position.x * inverseRad,
+                    vert.position.y * inverseRad,
+                    vert.position.z * inverseRad,
+                };
+
+                vertices.push_back(vert);
             }
+        }
 
-            if (i != (stackCount - 1))
-            {
-                indices.push_back(k1 + 1);
-                indices.push_back(k2);
-                indices.push_back(k2 + 1);
+        for (int i = 0; i < stackCount; i++) {
+            int k1 = i * (sectorCount + 1);
+            int k2 = k1 + sectorCount + 1;
+
+            for (int j = 0; j < sectorCount; j++, k1++, k2++) {
+                if (i != 0) {
+                    indices.push_back(k1);
+                    indices.push_back(k2);
+                    indices.push_back(k1 + 1);
+                }
+
+                if (i != (stackCount - 1))
+                {
+                    indices.push_back(k1 + 1);
+                    indices.push_back(k2);
+                    indices.push_back(k2 + 1);
+                }
+
             }
-
+        }
+        if (planetCount == 0) {
+            planetIndexCount = indices.size();
+            planetVertexCount = vertices.size();
         }
     }
+
     std::reverse(indices.begin(), indices.end());
 
     mPlanetMesh.primitives.push_back({
         ResourceFactory::CreateVertexBuffer(vertices),
         ResourceFactory::CreateIndexBuffer(indices)
     });
-    mPlanetData.vertexCount = vertices.size();
-    mBLAS = ResourceFactory::CreateBLAS(mPlanetMesh.primitives[0], L"Planet BLAS", true);
+    mPlanetData.vertexCount = planetVertexCount;
+    mBLASes.resize(sMaxPlanets);
+
+    for (int i = 0; i < sMaxPlanets; i++) {
+        mBLASes[i] = ResourceFactory::CreateBLAS(mPlanetMesh.primitives[0], L"Planet BLAS", true, i * planetVertexCount, planetVertexCount, i * planetIndexCount, planetIndexCount);
+    }
+    //mBLAS = ResourceFactory::CreateBLAS(mPlanetMesh.primitives[0], L"Planet BLAS", true);
 
 }

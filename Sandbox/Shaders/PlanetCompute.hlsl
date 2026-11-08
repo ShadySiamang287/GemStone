@@ -15,7 +15,7 @@ cbuffer PlanetData : register(b1)
 
 float3 SurfacePoint(float3 dir)
 {
-    // Must be the same expression your vertex displacement uses.
+	// Must be the same expression your vertex displacement uses.
 	return dir * (1.0f + FractalNoise(dir, roughness, ridgeRoughness, persistence));
 }
 
@@ -53,11 +53,16 @@ float ShapeTerrain(float rawHeight)
 [numthreads(256, 1, 1)]
 void PlanetCS(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
-    if (dispatchThreadID.x >= vertexCount) {
-		return;
-	}
+    uint planetID = dispatchThreadID.y;
 
-	VertexInput vert = vertexBuffer[dispatchThreadID.x];
+    uint localVertID = dispatchThreadID.x;
+    if (localVertID >= vertexCount)
+    {
+        return;
+    }
+    uint vertID = localVertID + planetID * vertexCount;
+	
+	VertexInput vert = vertexBuffer[vertID];
 	float3 direction = normalize(vert.position);
 	float noise = FractalNoise(direction, roughness, ridgeRoughness, persistence);
 	float totalNoise = ShapeTerrain(noise) * terrainStrength;

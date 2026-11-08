@@ -209,7 +209,7 @@ namespace GEM{
             return buffer;
         }
     
-        static std::unique_ptr<BLAS> CreateBLAS(const Primitive& primitive, std::wstring name, bool opaque);
+        static std::unique_ptr<BLAS> CreateBLAS(const Primitive& primitive, std::wstring name, bool opaque, int startVertex, int vertexCount, int startIndex, int indexCount);
         static std::unique_ptr<ProceduralBLAS> CreateProceduralBLAS(const D3D12_RAYTRACING_AABB& aabb, std::wstring name, bool opaque);
     
         static std::unique_ptr<TLAS> CreateTLAS(UINT maxInstances); 

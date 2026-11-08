@@ -22,7 +22,7 @@ namespace GEM{
     };
 
     class GEM_API ProceduralBLAS : public BLAS{
-        ProceduralBLAS();
+        ProceduralBLAS() {}
 
         Microsoft::WRL::ComPtr<D3D12MA::Allocation> mAABBAllocation;
 

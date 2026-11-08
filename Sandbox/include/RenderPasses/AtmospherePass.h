@@ -9,7 +9,7 @@ struct AtmosphereData{
     float planetRadius = 10.f;
     float atmosphereRadius = 14.f;
     float densityFalloff = 5.5f;
-    float strengthMultiplier = 0.25f;
+    float strengthMultiplier = 0.55f;
     int steps = 3;
 };
 
