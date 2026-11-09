@@ -9,23 +9,14 @@ using namespace GEM;
 AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tlas){
     mFrameDataBuffer = frameDataBuffer;
     tlasPtr = tlas;
+    
+    GenerateBaseMesh();
 
-    RootSignatureDesc rootDesc;
-    rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-    rootDesc.name = L"Atmosphere Root Signature";
+    mAtmosphereDataBuffer = ResourceFactory::CreateStructuredBuffer<AtmosphereData, 5>(mAtmosphereData);
 
-    D3D12_DESCRIPTOR_RANGE depthRange{};
-    depthRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
-    depthRange.NumDescriptors = 1;
-    depthRange.BaseShaderRegister = 0;
-    depthRange.RegisterSpace = 0;
-    depthRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
-    D3D12_ROOT_PARAMETER depthParam{};
-    depthParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
-    depthParam.DescriptorTable.NumDescriptorRanges = 1;
-    depthParam.DescriptorTable.pDescriptorRanges = &depthRange;
-    depthParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    RootSignatureDesc rtRootDesc{};
+    rtRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
+    rtRootDesc.name = L"RT Root Sig";
 
     D3D12_ROOT_PARAMETER frameDataParameter {};
     frameDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
@@ -33,43 +24,18 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
     frameDataParameter.Descriptor.ShaderRegister = 0; // b0
     frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
 
+    D3D12_DESCRIPTOR_RANGE atmosphereRange{};
+    atmosphereRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    atmosphereRange.NumDescriptors = 1;
+    atmosphereRange.BaseShaderRegister = 1;
+    atmosphereRange.RegisterSpace = 0;
+    atmosphereRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     D3D12_ROOT_PARAMETER atmosphereData {};
-    atmosphereData.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+    atmosphereData.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     atmosphereData.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    atmosphereData.Descriptor.ShaderRegister = 1; // b1
-    atmosphereData.Descriptor.RegisterSpace = 0;  // space0
-    
-    rootDesc.parameters.push_back(frameDataParameter);
-    rootDesc.parameters.push_back(atmosphereData);
-    rootDesc.parameters.push_back(depthParam);
-
-    mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
-
-    GraphicsPipelineDescription desc;
-    desc.name = L"Atmosphere Pass";
-    desc.rootSignature = mRootSig;
-    desc.inputElements = {
-        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-        {"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-    };
-    desc.vertexShader = { "Shaders/AtmosphereVS.dxil" };
-    desc.pixelShader = { "Shaders/AtmospherePS.dxil" };
-    desc.renderTargetFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT};
-    desc.culling = FaceCulling::BACK;
-    desc.depthTest = false;
-    desc.depthWrite = false;
-    desc.transparency = true;
-
-    mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
-
-    mAtmosphereDataBuffer = ResourceFactory::CreateConstantBuffer<AtmosphereData>();
-    mAtmosphereDataBuffer->Upload(mAtmosphereData);
-
-    GenerateBaseMesh();
-
-    RootSignatureDesc rtRootDesc{};
-    rtRootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
-    rtRootDesc.name = L"RT Root Sig";
+    atmosphereData.DescriptorTable.NumDescriptorRanges = 1; // b1
+    atmosphereData.DescriptorTable.pDescriptorRanges = &atmosphereRange;
 
     D3D12_DESCRIPTOR_RANGE accelRange{};
     accelRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
@@ -78,14 +44,11 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
     accelRange.RegisterSpace = 0;
     accelRange.OffsetInDescriptorsFromTableStart = 0;
 
-
     D3D12_ROOT_PARAMETER accelParam{};
     accelParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     accelParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     accelParam.DescriptorTable.NumDescriptorRanges = 1;
     accelParam.DescriptorTable.pDescriptorRanges = &accelRange;
-
-    rtRootDesc.parameters.push_back(accelParam);
 
     D3D12_DESCRIPTOR_RANGE uavRange{};
     uavRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
@@ -93,15 +56,15 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
     uavRange.BaseShaderRegister = 0; // u0
     uavRange.RegisterSpace = 0;
     uavRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
-
+    
     D3D12_ROOT_PARAMETER outputRT{};
     outputRT.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     outputRT.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
     outputRT.DescriptorTable.NumDescriptorRanges = 1;
     outputRT.DescriptorTable.pDescriptorRanges = &uavRange;
-
+    
+    rtRootDesc.parameters.push_back(accelParam);
     rtRootDesc.parameters.push_back(outputRT);
-
     rtRootDesc.parameters.push_back(frameDataParameter);
     rtRootDesc.parameters.push_back(atmosphereData);
 
@@ -136,74 +99,47 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
     };
 
     auto* colourTarget = manager.GetRenderTarget(L"Scene Color");
-    auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
     GraphicsCommands::BeginLabel(PIX_COLOR(0, 128, 255), "Atmosphere pass");
 
-    if (mRaytrace) {
-
-        glm::mat4x4 transform = glm::scale({1.f}, glm::vec3{mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius,mAtmosphereData.atmosphereRadius});
-        tlasPtr->AddInstance(*mBlas.get(), 1, 0x02, glm::mat4x3(transform));
-        GraphicsCommands::RebuildTLAS(*tlasPtr);
-
-        GraphicsCommands::TransitionRTV(
-            *colourTarget, colourTarget->GetState(),
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS
-        );
-        GraphicsCommands::BindRaytracingPipeline(*mRTPipeline);
-        GraphicsCommands::BindComputeSRV(0, tlasPtr->GetSRV());
-        GraphicsCommands::BindUAV(1, colourTarget->GetUAV());
-        GraphicsCommands::SetComputeConstantBufferView(2, mFrameDataBuffer->GetAddress());
-        GraphicsCommands::SetComputeConstantBufferView(3, mAtmosphereDataBuffer->GetAddress());
-        GraphicsCommands::DispatchRays(*mShaderTable, colourTarget->GetWidth(), colourTarget->GetHeight());
-    } else {
-        GraphicsCommands::TransitionDSV(
-            *depthTarget, depthTarget->GetState(),
-            D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-        );
-
-
-        std::array<RenderTarget*, 1> targets = {
-            colourTarget
-        };
-        GraphicsCommands::BindRenderTargets(targets);
-        GraphicsCommands::BindViewport(
-            0.f,
-            0.f,
-            static_cast<float>(manager.GetWidth()),
-            static_cast<float>(manager.GetHeight()),
-            0.f,
-            1.f
-        );
-        GraphicsCommands::BindScissorRect(
-            0,
-            0,
-            static_cast<int>(manager.GetWidth()),
-            static_cast<int>(manager.GetHeight())
-        );
-        GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
-        GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
-        GraphicsCommands::SetGraphicsConstantBufferView(1, mAtmosphereDataBuffer->GetAddress());
-        GraphicsCommands::BindSRV(2, depthTarget->GetSRV());
-        GraphicsCommands::BindVertexBuffer(*mModel.primitives[0].vertexBuffer.get());
-        GraphicsCommands::BindIndexBuffer(*mModel.primitives[0].indexBuffer.get());
-        GraphicsCommands::DrawIndexed(mModel.primitives[0].indexBuffer->GetIndexCount(), 1, 0, 0, 0);
+    for (int i = 0; i < atmosphereCount; i++) {
+        auto& data = mAtmosphereData[i];
+        glm::mat4x4 translation =  glm::translate({1.f}, data.position);
+        glm::mat4x4 transform = glm::scale(translation, glm::vec3{data.atmosphereRadius,data.atmosphereRadius,data.atmosphereRadius});
+        tlasPtr->AddInstance(*mBlas.get(), 1 + i, 0x02, glm::mat4x3(transform));
     }
+    GraphicsCommands::RebuildTLAS(*tlasPtr);
+
+    GraphicsCommands::TransitionRTV(
+        *colourTarget, colourTarget->GetState(),
+        D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+    );
+    GraphicsCommands::BindRaytracingPipeline(*mRTPipeline);
+    GraphicsCommands::BindComputeSRV(0, tlasPtr->GetSRV());
+    GraphicsCommands::BindUAV(1, colourTarget->GetUAV());
+    GraphicsCommands::SetComputeConstantBufferView(2, mFrameDataBuffer->GetAddress());
+    GraphicsCommands::BindComputeSRV(3, mAtmosphereDataBuffer->GetSRV());
+    GraphicsCommands::DispatchRays(*mShaderTable, colourTarget->GetWidth(), colourTarget->GetHeight());
+
     GraphicsCommands::EndLabel();
 }
 
 void AtmospherePass::OnImGuiRender() {
     ImGui::Begin("Atmosphere Data");
-    
-    ImGui::Checkbox("Ray trace?", &mRaytrace);
-    ImGui::ColorEdit3("Planet Atmosphere", &mAtmosphereData.atmosphereColour.r);
-    ImGui::SliderFloat("Planet Radius", &mAtmosphereData.planetRadius, 0.1f, 100.f);
-    ImGui::SliderFloat("Atmosphere Radius", &mAtmosphereData.atmosphereRadius, 0.1f, 100.f);
-    ImGui::SliderFloat("Density Falloff", &mAtmosphereData.densityFalloff, 0.1f, 10.f);
-    ImGui::SliderFloat("Strength Multiplier", &mAtmosphereData.strengthMultiplier, 0.1f, 10.f);
-    ImGui::SliderInt("Ray traced steps", &mAtmosphereData.steps, 1, 10);
+    ImGui::SliderInt("Atmosphere Count", &atmosphereCount, 1, 5);
+    for (int i = 0; i < atmosphereCount; i++){
+        auto& data = mAtmosphereData[i];
+        ImGui::PushID(i);
+        ImGui::Separator();
+        ImGui::ColorEdit3("Planet Atmosphere", &data.atmosphereColour.r);
+        ImGui::SliderFloat3("Atmosphere position", &data.position.r, 0.f, 100.f);
+        ImGui::SliderFloat("Planet Radius", &data.planetRadius, -100.f, 100.f);
+        ImGui::SliderFloat("Atmosphere Radius", &data.atmosphereRadius, 0.1f, 100.f);
+        ImGui::SliderFloat("Density Falloff", &data.densityFalloff, 0.1f, 10.f);
+        ImGui::SliderFloat("Strength Multiplier", &data.strengthMultiplier, 0.1f, 10.f);
+        ImGui::SliderInt("Ray traced steps", &data.steps, 1, 10);
+        ImGui::PopID();
+    }
     ImGui::End();
-
-    mAtmosphereDataBuffer->Upload(mAtmosphereData);
 }
 
 void AtmospherePass::GenerateBaseMesh() {
@@ -271,6 +207,6 @@ void AtmospherePass::GenerateBaseMesh() {
         ResourceFactory::CreateIndexBuffer(indices)
     });
 
-    mBlas = ResourceFactory::CreateBLAS(mModel.primitives[0], L"Atmosphere BLAS", false, 0, vertices.size(), 0, indices.size());
+    mBlas = ResourceFactory::CreateBLAS(mModel.primitives[0], L"Atmosphere BLAS", true, 0, vertices.size(), 0, indices.size());
 
 }

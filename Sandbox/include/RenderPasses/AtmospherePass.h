@@ -5,6 +5,7 @@
 #include "Graphics/ResourceFactory.h"
 
 struct AtmosphereData{
+    glm::vec3 position = {0.f, 0.f, 0.f};
     glm::vec3 atmosphereColour = {0.15, 0.4, 1.0};
     float planetRadius = 10.f;
     float atmosphereRadius = 14.f;
@@ -20,20 +21,19 @@ public:
 	void OnImGuiRender() override;
 
 private:
-    std::shared_ptr<GEM::RootSignature> mRootSig; 
-    std::shared_ptr<GEM::RootSignature> mRTRootSig;
-    std::unique_ptr<GEM::GraphicsPipeline> mPipeline;
-    GEM::ConstantBuffer<GEM::FrameData>* mFrameDataBuffer = nullptr;
-    std::unique_ptr<GEM::ConstantBuffer<AtmosphereData>> mAtmosphereDataBuffer = nullptr;
-    AtmosphereData mAtmosphereData;
-
-    void GenerateBaseMesh();
-
-    GEM::Model mModel;
+    GEM::TLAS* tlasPtr;
     std::unique_ptr<GEM::BLAS> mBlas = nullptr;
+    GEM::Model mModel;
+    void GenerateBaseMesh();
+    
+    std::shared_ptr<GEM::RootSignature> mRTRootSig;
     std::unique_ptr<GEM::RaytracingPipeline> mRTPipeline = nullptr;
     std::unique_ptr<GEM::ShaderTable> mShaderTable = nullptr;
-    GEM::TLAS* tlasPtr;
+    GEM::ConstantBuffer<GEM::FrameData>* mFrameDataBuffer = nullptr;
+    std::unique_ptr<GEM::StructuredBuffer<AtmosphereData, 5>> mAtmosphereDataBuffer = nullptr;
 
-    bool mRaytrace = true;
+    std::array<AtmosphereData, 5> mAtmosphereData;
+    int atmosphereCount = 1;
+
+
 };

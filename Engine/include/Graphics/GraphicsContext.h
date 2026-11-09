@@ -2,7 +2,7 @@
 
 namespace GEM{
     /// @brief This class encapsulates the DirectX12 objects 
-    class GraphicsContext{
+    class GEM_API GraphicsContext{
     public:
         /// @brief Initialises the objects
         /// @param window The window being renderered too 

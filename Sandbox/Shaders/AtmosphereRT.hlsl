@@ -1,4 +1,16 @@
+
+struct AtmosphereData {
+    float3 position;
+    float3 atmosphereColour;
+    float planetRadius;
+    float atmosphereRadius;
+    float densityFalloff;
+    float strengthMultiplier;
+    int steps;
+};
+
 RaytracingAccelerationStructure accelStructure : register(t0);
+StructuredBuffer<AtmosphereData> atmosphereBuffer : register(t1);
 RWTexture2D<float4> outputTexture : register(u0);
 
 cbuffer FrameData : register(b0)
@@ -11,14 +23,15 @@ cbuffer FrameData : register(b0)
     float3 _padding;
 }
 
-cbuffer AtmosphereData : register(b1) {
-    float3 atmosphereColour;
-    float planetRadius;
-    float atmosphereRadius;
-    float densityFalloff;
-    float strengthMultiplier;
-    int steps;
-}
+
+// cbuffer AtmosphereData : register(b1) {
+//     float3 atmosphereColour;
+//     float planetRadius;
+//     float atmosphereRadius;
+//     float densityFalloff;
+//     float strengthMultiplier;
+//     int steps;
+// }
 
 bool RaySphere(float3 origin, float3 direction, float radius, out float t0, out float t1) {
     t0 = 0.0;
@@ -38,11 +51,11 @@ bool RaySphere(float3 origin, float3 direction, float radius, out float t0, out 
 
 struct Payload {
     float hitT;
+    uint instanceID;
 };
 
 [shader("raygeneration")]
 void rayGen() {
-
     uint2 launchIndex = DispatchRaysIndex().xy;
     float2 dims = DispatchRaysDimensions().xy;
     float2 ndc = ((float2(launchIndex) + 0.5) / dims) * float2(2.0, -2.0) + float2(-1.0, 1.0);
@@ -53,57 +66,68 @@ void rayGen() {
     float3 rayOrigin = mul(invViewMatrix, float4(0, 0, 0, 1)).xyz;
 
     float tNear, tFar;
-    if (!RaySphere(rayOrigin, rayDir, atmosphereRadius, tNear, tFar)) {
-        return;
-    }
-
-    tNear = max(tNear, 0.0f);
-    if (tFar <= tNear) return;
 
     RayDesc ray;
     ray.Origin = rayOrigin;
     ray.Direction = rayDir;
-    ray.TMin = tNear;
-    ray.TMax = tFar;
+    ray.TMin = 0.0f;
+    ray.TMax = 1e30;
 
     Payload p;
-    p.hitT = tFar;
-    TraceRay(accelStructure, RAY_FLAG_NONE, 0x01, 0, 1, 0, ray, p);
+    p.hitT = -1.0f;
 
-    tFar = min(tFar, p.hitT);
+    TraceRay(accelStructure, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0x02, 0, 1, 0, ray, p);
+    if (p.hitT < 0.0) {
+        return;
+    }
+    tFar = p.hitT;
+    p.hitT = -1.0f;
+    TraceRay(accelStructure, RAY_FLAG_CULL_FRONT_FACING_TRIANGLES, 0x02, 0, 1, 0, ray, p);
+    tNear = (p.hitT >= 0.0) ? p.hitT : 0.0;
+    
+    uint instanceID = p.instanceID;
+
+    ray.TMin = tNear;
+    ray.TMax = tFar;
+    p.hitT = -1.0f;
+    TraceRay(accelStructure, RAY_FLAG_NONE, 0x01, 0, 1, 0, ray, p);
+    if (p.hitT >= 0.0) tFar = min(tFar, p.hitT);
+    
+    AtmosphereData atmosphere = atmosphereBuffer[instanceID - 1];
 
     float pathLength = tFar - tNear;
     if (pathLength <= 0.0) {
         return;
     }
 
-    float stepSize = pathLength / (float)steps;
-    float thickness = atmosphereRadius - planetRadius;
+    float stepSize = pathLength / (float)atmosphere.steps;
+    float thickness = atmosphere.atmosphereRadius - atmosphere.planetRadius;
 
     float opticalDepth = 0.0;
 
-    for (int i = 0; i < steps; i++)
+    for (int i = 0; i < atmosphere.steps; i++)
     {
         float3 samplePoint = rayOrigin + rayDir * (tNear + (i + 0.5) * stepSize);
 
-        float altitude = saturate((length(samplePoint) - planetRadius) / thickness);
-        float density = exp(-altitude * densityFalloff);
+        float altitude = saturate((length(samplePoint) - atmosphere.planetRadius) / thickness);
+        float density = exp(-altitude * atmosphere.densityFalloff);
 
         opticalDepth += density * stepSize;
     }
 
-    float alpha = 1.0 - exp(-opticalDepth * strengthMultiplier);
-    float4 col = float4(atmosphereColour, alpha);
+    float alpha = 1.0 - exp(-opticalDepth * atmosphere.strengthMultiplier);
+    float4 col = float4(atmosphere.atmosphereColour, alpha);
 
     outputTexture[launchIndex.xy] = float4(lerp(outputTexture[launchIndex].rgb, col.rgb, col.a), 1.0);
 }
 
 [shader("miss")]
 void miss(inout Payload payload) {
-    payload.hitT = 1e30f;
+    payload.hitT = -1.0f;
 }
 
 [shader("closesthit")]
 void closestHit(inout Payload payload, in BuiltInTriangleIntersectionAttributes attr) {
     payload.hitT = RayTCurrent();
+    payload.instanceID = InstanceID();
 }

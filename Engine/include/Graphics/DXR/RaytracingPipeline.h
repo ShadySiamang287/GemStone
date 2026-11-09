@@ -21,6 +21,7 @@ namespace GEM{
     // uhh i have no idea what needs to go in here );
     struct HitPayload{
         float tHit;
+        UINT instanceID;
     };
 
     class RaytracingPipeline{
