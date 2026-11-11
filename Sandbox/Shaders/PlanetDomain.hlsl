@@ -28,21 +28,25 @@ cbuffer FrameData : register(b0)
 
 StructuredBuffer<PlanetData> planetDataBuffer : register(t0);
 
-// cbuffer PlanetData : register(b1)
-// {
-//     float radius;
-//     float roughness;
-//     float ridgeRoughness;
-//     float persistence;
-//     float terrainStrength;
-//     uint vertexCount;
-// }
+float ShapeTerrain(float rawHeight) {
+    float oceanMask = smoothstep(-0.4f, 0.0f, rawHeight);
+    float mountainMask = smoothstep(0.2f, 0.6f, rawHeight);
 
-float3 SurfacePoint(float3 dir)
+    float oceanVal = rawHeight * 1.4f;
+    float plainsVal = rawHeight * 0.7f;
+    float mountainVal = 0.14f + pow(max(rawHeight - 0.2f, 0.0f), 1.4f) * 2.2f;
+
+    float heightOutput = lerp(oceanVal, plainsVal, oceanMask);
+    heightOutput = lerp(heightOutput, mountainVal, mountainMask);
+
+    return heightOutput;
+}
+
+float3 SurfacePoint(PlanetData planet, float3 dir)
 {
-    float noise = FractalNoise(dir, roughness, ridgeRoughness, persistence);
-    float totalNoise = ShapeTerrain(noise) * terrainStrength;
-    return dir * max(radius, radius + totalNoise);
+    float noise = FractalNoise(dir, planet.roughness, planet.ridgeRoughness, planet.persistence);
+    float totalNoise = ShapeTerrain(noise) * planet.terrainStrength;
+    return dir * max(planet.radius, planet.radius + totalNoise);
 }
 
 float3 CalculateNormal(PlanetData planet, float3 position)

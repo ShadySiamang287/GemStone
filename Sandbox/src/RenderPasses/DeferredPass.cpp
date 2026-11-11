@@ -166,9 +166,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     );
     GraphicsCommands::BindVertexBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get());
     GraphicsCommands::BindIndexBuffer(*mPlanetMesh.primitives[0].indexBuffer.get());
-    for (int i = 0; i < totalPlanetCount; i++) {
-        GraphicsCommands::DrawIndexed(planetIndexCount, 1, 0, planetVertexCount * i, i);
-    }
+    GraphicsCommands::DrawIndexed(planetIndexCount, totalPlanetCount, 0, 0, 0);
 
     GraphicsCommands::EndLabel();
 }
