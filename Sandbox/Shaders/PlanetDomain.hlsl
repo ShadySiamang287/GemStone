@@ -34,10 +34,25 @@ cbuffer PlanetData : register(b1)
     uint vertexCount;
 }
 
+float ShapeTerrain(float rawHeight) {
+    float oceanMask = smoothstep(-0.4f, 0.0f, rawHeight);
+    float mountainMask = smoothstep(0.2f, 0.6f, rawHeight);
+
+    float oceanVal = rawHeight * 1.4f;
+    float plainsVal = rawHeight * 0.7f;
+    float mountainVal = 0.14f + pow(max(rawHeight - 0.2f, 0.0f), 1.4f) * 2.2f;
+
+    float heightOutput = lerp(oceanVal, plainsVal, oceanMask);
+    heightOutput = lerp(heightOutput, mountainVal, mountainMask);
+
+    return heightOutput;
+}
+
 float3 SurfacePoint(float3 dir)
 {
-    // Must be the same expression your vertex displacement uses.
-    return dir * (1.0f + FractalNoise(dir, roughness, ridgeRoughness, persistence));
+    float noise = FractalNoise(dir, roughness, ridgeRoughness, persistence);
+    float totalNoise = ShapeTerrain(noise) * terrainStrength;
+    return dir * max(radius, radius + totalNoise);
 }
 
 float3 CalculateNormal(float3 position)
@@ -54,20 +69,6 @@ float3 CalculateNormal(float3 position)
     float3 pB = SurfacePoint(normalize(dir + B * eps));
 
     return normalize(cross(pT - p0, pB - p0));
-}
-
-float ShapeTerrain(float rawHeight) {
-    float oceanMask = smoothstep(-0.4f, 0.0f, rawHeight);
-    float mountainMask = smoothstep(0.2f, 0.6f, rawHeight);
-
-    float oceanVal = rawHeight * 1.4f;
-    float plainsVal = rawHeight * 0.7f;
-    float mountainVal = 0.14f + pow(max(rawHeight - 0.2f, 0.0f), 1.4f) * 2.2f;
-
-    float heightOutput = lerp(oceanVal, plainsVal, oceanMask);
-    heightOutput = lerp(heightOutput, mountainVal, mountainMask);
-
-    return heightOutput;
 }
 
 [domain("tri")]
