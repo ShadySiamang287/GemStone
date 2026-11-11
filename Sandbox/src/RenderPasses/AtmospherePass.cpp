@@ -105,7 +105,7 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
         auto& data = mAtmosphereData[i];
         glm::mat4x4 translation =  glm::translate({1.f}, data.position);
         glm::mat4x4 transform = glm::scale(translation, glm::vec3{data.atmosphereRadius,data.atmosphereRadius,data.atmosphereRadius});
-        tlasPtr->AddInstance(*mBlas.get(), 1 + i, 0x02, glm::mat4x3(transform));
+        tlasPtr->AddInstance(*mBlas.get(), 4 + i, 0x02, glm::mat4x3(transform));
     }
     GraphicsCommands::RebuildTLAS(*tlasPtr);
 
@@ -131,8 +131,8 @@ void AtmospherePass::OnImGuiRender() {
         ImGui::PushID(i);
         ImGui::Separator();
         ImGui::ColorEdit3("Planet Atmosphere", &data.atmosphereColour.r);
-        ImGui::SliderFloat3("Atmosphere position", &data.position.r, 0.f, 100.f);
-        ImGui::SliderFloat("Planet Radius", &data.planetRadius, -100.f, 100.f);
+        ImGui::SliderFloat3("Atmosphere position", &data.position.r, -100.f, 100.f);
+        ImGui::SliderFloat("Planet Radius", &data.planetRadius, 0.f, 100.f);
         ImGui::SliderFloat("Atmosphere Radius", &data.atmosphereRadius, 0.1f, 100.f);
         ImGui::SliderFloat("Density Falloff", &data.densityFalloff, 0.1f, 10.f);
         ImGui::SliderFloat("Strength Multiplier", &data.strengthMultiplier, 0.1f, 10.f);
@@ -140,6 +140,9 @@ void AtmospherePass::OnImGuiRender() {
         ImGui::PopID();
     }
     ImGui::End();
+
+    GraphicsCommands::CopyDataToBuffer(mAtmosphereDataBuffer->GetResource(), mAtmosphereData.data(), mAtmosphereData.size() * sizeof(AtmosphereData));
+
 }
 
 void AtmospherePass::GenerateBaseMesh() {

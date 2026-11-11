@@ -57,6 +57,7 @@ void GraphicsCommands::BeginFrame() {
 		sContextPtr->mSRVHeap.Get()
 	};
 	commandList->SetDescriptorHeaps(1, descriptorHeaps);
+    sContextPtr->mUploadOffset = 0;
 }
 
 ID3D12GraphicsCommandList4* GraphicsCommands::GetCommandList() {
@@ -386,66 +387,45 @@ void GraphicsCommands::EndLabel() {
 void GraphicsCommands::CopyDataToBuffer(ID3D12Resource* buffer, void* data, size_t size) {
     CHECK_CONTEXT
 
-	D3D12MA::ALLOCATION_DESC defaultDesc{};
-	defaultDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+    auto* commandList = sContextPtr->mCommandList.Get();
+    ID3D12Resource* upload = sContextPtr->mUploadBuffer->GetResource();
 
-	Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation;
-    D3D12MA::ALLOCATION_DESC uploadDesc{};
-    uploadDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+    size_t offset = (sContextPtr->mUploadOffset + 255) & ~255;
+    assert(offset + size <= 1024 * 512);
+    sContextPtr->mUploadOffset = offset + size;
 
-
-    D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
-
-    THROW_IF_FAILED(
-        sContextPtr->mAllocator->CreateResource(
-            &uploadDesc,
-            &resourceDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
-            nullptr,
-            uploadAllocation.GetAddressOf(),
-            IID_NULL,
-            nullptr
-        )
-    );
-    ID3D12Resource* upload = uploadAllocation->GetResource();
-
-    void* mappedData = nullptr;
+    uint8_t* mappedData = nullptr;
     D3D12_RANGE readRange{ 0, 0 };
 
-    THROW_IF_FAILED(upload->Map(0,&readRange, &mappedData));
-
-    std::memcpy(mappedData, data, size);
+    THROW_IF_FAILED(upload->Map(0,&readRange, reinterpret_cast<void**>(&mappedData)));
+    std::memcpy(mappedData + offset, data, size);
 
     upload->Unmap(0, nullptr);
 
-    GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList){
-        auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
-			buffer,
-			D3D12_RESOURCE_STATE_COMMON,
-			D3D12_RESOURCE_STATE_COPY_DEST
-		);
+    auto toCopyDest = CD3DX12_RESOURCE_BARRIER::Transition(
+        buffer,
+        D3D12_RESOURCE_STATE_COMMON,
+        D3D12_RESOURCE_STATE_COPY_DEST
+    );
 
-		commandList->ResourceBarrier(1, &toCopyDest);
-		
-		commandList->CopyBufferRegion(
+    commandList->ResourceBarrier(1, &toCopyDest);
+    
+    commandList->CopyBufferRegion(
+        buffer,
+        0,
+        upload,
+        offset,
+        size
+    );
+
+    auto barrier =
+        CD3DX12_RESOURCE_BARRIER::Transition(
             buffer,
-            0,
-            upload,
-            0,
-            size
+            D3D12_RESOURCE_STATE_COPY_DEST,
+            D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
         );
 
-        auto barrier =
-            CD3DX12_RESOURCE_BARRIER::Transition(
-                buffer,
-                D3D12_RESOURCE_STATE_COPY_DEST,
-                D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
-            );
-
-        commandList->ResourceBarrier(1, &barrier);
-	});
-
-    uploadAllocation.Reset();
+    commandList->ResourceBarrier(1, &barrier);
 }
 
 void GraphicsCommands::RebuildBLAS(BLAS& blas) {

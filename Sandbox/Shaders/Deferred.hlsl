@@ -11,11 +11,14 @@ cbuffer FrameData : register(b0)
     float3 _padding;
 }
 
-VertexInput vertMain(VertexInput input) {
-    VertexInput output;
+StructuredBuffer<PlanetData> planetDataBuffer : register(t0);
+
+VertexOut vertMain(VertexInput input, uint instanceID: SV_InstanceID) {
+    VertexOut output;
 
     output.position = input.position;
     output.normal = input.normal;
+    output.instanceID = instanceID;
 
     return output;
 }
@@ -31,6 +34,7 @@ struct VertexOutDS {
 
     float terrainHeight : TEXCOORD0;
     float3 direction : TEXCOORD1;
+    nointerpolation uint instanceID: TEXCOORD2;
 };
 
 FragOut fragMain(VertexOutDS inVert)

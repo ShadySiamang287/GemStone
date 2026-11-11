@@ -4,8 +4,7 @@ using namespace GEM;
 
 using namespace Microsoft::WRL;
 
-const wchar_t* GetBreadcrumbOperationName(
-    D3D12_AUTO_BREADCRUMB_OP operation)
+const wchar_t* GetBreadcrumbOperationName(D3D12_AUTO_BREADCRUMB_OP operation)
 {
     switch (operation)
     {
@@ -48,6 +47,25 @@ GraphicsContext::GraphicsContext(HWND window, UINT width, UINT height)
 	CreateFence();
 	CreateSwapchain(window, mWidth, mHeight);
 	CreateSRVHeap();
+
+	Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation;
+    D3D12MA::ALLOCATION_DESC uploadDesc{};
+    uploadDesc.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+
+
+    D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(1024 * 512);
+
+    THROW_IF_FAILED(
+        mAllocator->CreateResource(
+            &uploadDesc,
+            &resourceDesc,
+            D3D12_RESOURCE_STATE_GENERIC_READ,
+            nullptr,
+            mUploadBuffer.GetAddressOf(),
+            IID_NULL,
+            nullptr
+        )
+    );
 }
 
 GraphicsContext::~GraphicsContext() {
@@ -56,6 +74,7 @@ GraphicsContext::~GraphicsContext() {
 		mFenceEvent = nullptr;
 	}
 
+	mUploadBuffer.Reset();
 	if (mAllocator) {
 		mAllocator->Release();
 		mAllocator = nullptr;

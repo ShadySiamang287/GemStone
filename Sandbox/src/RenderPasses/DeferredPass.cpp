@@ -9,6 +9,7 @@
 using namespace GEM;
 
 DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tlas) {
+    static_assert(sizeof(PlanetData) == 36);
     mFrameDataBuffer = frameDataBuffer;
     tlasPtr = tlas;
 
@@ -19,17 +20,24 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tla
     frameDataParameter.Descriptor.ShaderRegister = 0; // b0
     frameDataParameter.Descriptor.RegisterSpace = 0;  // space0
 
-    D3D12_ROOT_PARAMETER planetDataParameter{};
-	planetDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-    planetDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-    planetDataParameter.Descriptor.RegisterSpace = 0;
-	planetDataParameter.Descriptor.ShaderRegister = 1;
-
     D3D12_ROOT_PARAMETER tessDataParameter{};
     tessDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
     tessDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_HULL;
     tessDataParameter.Descriptor.RegisterSpace = 0;
-    tessDataParameter.Descriptor.ShaderRegister = 2;
+    tessDataParameter.Descriptor.ShaderRegister = 1;
+
+    D3D12_DESCRIPTOR_RANGE planetRange{};
+    planetRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    planetRange.NumDescriptors = 1;
+    planetRange.BaseShaderRegister = 0;
+    planetRange.RegisterSpace = 0;
+    planetRange.OffsetInDescriptorsFromTableStart = 0;
+
+    D3D12_ROOT_PARAMETER planetDataParameter;
+	planetDataParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    planetDataParameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+    planetDataParameter.DescriptorTable.NumDescriptorRanges = 1;
+	planetDataParameter.DescriptorTable.pDescriptorRanges = &planetRange;
 
     RootSignatureDesc rootDesc;
     rootDesc.flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
@@ -41,8 +49,7 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tla
     
     mRootSig = ResourceFactory::CreateRootSignature(rootDesc);
     
-    mPlanetDataBuffer = ResourceFactory::CreateConstantBuffer<PlanetData>();
-    mPlanetDataBuffer->Upload(mPlanetData);
+    mPlanetDataBuffer = ResourceFactory::CreateStructuredBuffer<PlanetData, 5>(mPlanetData);
 
 	mTesselationDataBuffer = ResourceFactory::CreateConstantBuffer<TesselationData>();
 	mTesselationDataBuffer->Upload(mTesselationData);
@@ -98,12 +105,17 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
     GraphicsCommands::BindComputePipeline(*mComputePipeline.get());
     GraphicsCommands::BindUAV(0, mPlanetMesh.primitives[0].vertexBuffer->GetResource()->GetGPUVirtualAddress());
-    GraphicsCommands::SetComputeConstantBufferView(1, mPlanetDataBuffer->GetAddress());
+    GraphicsCommands::BindComputeSRV(1, mPlanetDataBuffer->GetSRV());
     UINT threadXCount = (planetVertexCount + 256 - 1) / 256;
     GraphicsCommands::DispatchCompute(threadXCount, totalPlanetCount, 1);
     GraphicsCommands::TransitionBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
-    GraphicsCommands::RebuildBLAS(*mBLASes[0].get());
-    tlasPtr->AddInstance(*mBLASes[0].get(), 0, 0x01, glm::mat4x3(1.f));
+    
+    for (int i = 0; i < totalPlanetCount; i++) {
+        GraphicsCommands::RebuildBLAS(*mBLASes[i].get());
+        glm::mat4x4 translation =  glm::translate({1.f}, mPlanetData[i].position);
+        tlasPtr->AddInstance(*mBLASes[i].get(), i, 0x01, glm::mat4x3(translation));
+    }
+
     GraphicsCommands::RebuildTLAS(*tlasPtr);
     GraphicsCommands::EndLabel();
 
@@ -136,7 +148,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
 
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
     GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
-	GraphicsCommands::SetGraphicsConstantBufferView(1, mPlanetDataBuffer->GetAddress());
+	GraphicsCommands::BindSRV(1, mPlanetDataBuffer->GetSRV());
 	GraphicsCommands::SetGraphicsConstantBufferView(2, mTesselationDataBuffer->GetAddress());
     GraphicsCommands::BindViewport(
         0.f,
@@ -154,7 +166,9 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     );
     GraphicsCommands::BindVertexBuffer(*mPlanetMesh.primitives[0].vertexBuffer.get());
     GraphicsCommands::BindIndexBuffer(*mPlanetMesh.primitives[0].indexBuffer.get());
-    GraphicsCommands::DrawIndexed(planetIndexCount, 1, 0, 0, 0);
+    for (int i = 0; i < totalPlanetCount; i++) {
+        GraphicsCommands::DrawIndexed(planetIndexCount, 1, 0, planetVertexCount * i, i);
+    }
 
     GraphicsCommands::EndLabel();
 }
@@ -162,18 +176,26 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
 void DeferredPass::OnImGuiRender() {
     ImGui::Begin("Planet Pass");
     ImGui::SliderInt("Planet Count", &totalPlanetCount, 1, 5);
-    ImGui::SeparatorText("Planet Generation Settings");
-    ImGui::SliderFloat("Radius", &mPlanetData.radius, 0.1f, 100.f);
-    ImGui::SliderFloat("Roughness", &mPlanetData.roughness, 0.0f, 10.f);
-    ImGui::SliderFloat("Riged Roughness", &mPlanetData.rigedRoughness, 0.f, 10.f);
-    ImGui::SliderFloat("Persistence", &mPlanetData.persistence, 0.0f, 10.f);
-    ImGui::SliderFloat("Terrain Strength", &mPlanetData.terrainStrength, 0.0f, 10.f);
-    mPlanetDataBuffer->Upload(mPlanetData);
-
     ImGui::SeparatorText("Tesselation Settings");
 	ImGui::SliderFloat("Max Tesselation", &mTesselationData.maxTess, 1.f, 64.f);
 	ImGui::SliderFloat("Near Distance", &mTesselationData.nearDist, 1.f, 100.f);
 	ImGui::SliderFloat("Far Distance", &mTesselationData.farDist, 1.f, 100.f);
+
+    ImGui::SeparatorText("Planet Generation Settings");
+    for (int i = 0; i < totalPlanetCount; i++){
+        ImGui::PushID(i);
+        ImGui::Separator();
+        auto& data = mPlanetData[i];
+        ImGui::SliderFloat("Radius", &data.radius, 0.1f, 100.f);
+        ImGui::SliderFloat3("Position", &data.position.x, -100.f, 100.f);
+        ImGui::SliderFloat("Roughness", &data.roughness, 0.0f, 10.f);
+        ImGui::SliderFloat("Riged Roughness", &data.rigedRoughness, 0.f, 10.f);
+        ImGui::SliderFloat("Persistence", &data.persistence, 0.0f, 10.f);
+        ImGui::SliderFloat("Terrain Strength", &data.terrainStrength, 0.0f, 10.f);
+        ImGui::PopID();
+    }
+
+    GraphicsCommands::CopyDataToBuffer(mPlanetDataBuffer->GetResource(), mPlanetData.data(), mPlanetData.size() * sizeof(PlanetData));
 
 	mTesselationDataBuffer->Upload(mTesselationData);
     ImGui::End();
@@ -251,12 +273,10 @@ void DeferredPass::GenerateBaseMesh() {
         ResourceFactory::CreateVertexBuffer(vertices),
         ResourceFactory::CreateIndexBuffer(indices)
     });
-    mPlanetData.vertexCount = planetVertexCount;
     mBLASes.resize(sMaxPlanets);
-
+    
     for (int i = 0; i < sMaxPlanets; i++) {
+        mPlanetData[i].vertexCount = planetVertexCount;
         mBLASes[i] = ResourceFactory::CreateBLAS(mPlanetMesh.primitives[0], L"Planet BLAS", true, i * planetVertexCount, planetVertexCount, i * planetIndexCount, planetIndexCount);
     }
-    //mBLAS = ResourceFactory::CreateBLAS(mPlanetMesh.primitives[0], L"Planet BLAS", true);
-
 }

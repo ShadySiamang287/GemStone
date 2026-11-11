@@ -597,8 +597,6 @@ std::unique_ptr<ProceduralBLAS> ResourceFactory::CreateProceduralBLAS(const D3D1
 
 	ProceduralBLAS* blas = new ProceduralBLAS();
 
-
-	
 	D3D12_RAYTRACING_GEOMETRY_DESC geomDesc = {};
 	geomDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
 	geomDesc.AABBs.AABBCount = 0;

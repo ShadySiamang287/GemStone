@@ -7,6 +7,7 @@
 using namespace GEM;
 
 struct PlanetData {
+	glm::vec3 position = {0.f, 0.f, 0.f};
 	float radius = 10.f;
 	float roughness = 0.4f;
 	float rigedRoughness = 0.8f;
@@ -32,14 +33,14 @@ private:
 	std::shared_ptr<RootSignature> mComputeSig;
 	std::unique_ptr<GraphicsPipeline> mPipeline;
 	ConstantBuffer<FrameData>* mFrameDataBuffer = nullptr;
-	std::unique_ptr<ConstantBuffer<PlanetData>> mPlanetDataBuffer = nullptr;
+	std::unique_ptr<StructuredBuffer<PlanetData, 5>> mPlanetDataBuffer = nullptr;
 	std::unique_ptr<ConstantBuffer<TesselationData>> mTesselationDataBuffer = nullptr;
 
 	std::unique_ptr<ComputePipeline> mComputePipeline = nullptr;
 	std::vector<std::unique_ptr<BLAS>> mBLASes;
 	TLAS* tlasPtr = nullptr;
 
-	PlanetData mPlanetData;
+	std::array<PlanetData, 5> mPlanetData;
 	TesselationData mTesselationData;
 
 	std::array<float, 4> mClearColour;

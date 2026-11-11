@@ -93,7 +93,7 @@ void rayGen() {
     TraceRay(accelStructure, RAY_FLAG_NONE, 0x01, 0, 1, 0, ray, p);
     if (p.hitT >= 0.0) tFar = min(tFar, p.hitT);
     
-    AtmosphereData atmosphere = atmosphereBuffer[instanceID - 1];
+    AtmosphereData atmosphere = atmosphereBuffer[instanceID - 4];
 
     float pathLength = tFar - tNear;
     if (pathLength <= 0.0) {
@@ -109,7 +109,8 @@ void rayGen() {
     {
         float3 samplePoint = rayOrigin + rayDir * (tNear + (i + 0.5) * stepSize);
 
-        float altitude = saturate((length(samplePoint) - atmosphere.planetRadius) / thickness);
+        float distFromCenter = length(samplePoint - atmosphere.position);
+        float altitude = saturate((distFromCenter - atmosphere.planetRadius) / thickness);
         float density = exp(-altitude * atmosphere.densityFalloff);
 
         opticalDepth += density * stepSize;

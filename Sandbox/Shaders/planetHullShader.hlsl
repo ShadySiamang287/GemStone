@@ -11,7 +11,7 @@ cbuffer FrameData : register(b0)
     float3 _padding;
 }
 
-cbuffer TessellationData : register(b2)
+cbuffer TessellationData : register(b1)
 {
     float maxTess;
     float nearDist;
@@ -48,5 +48,6 @@ VertexOut PlanetHullShader(InputPatch<VertexOut, 3> patch, uint i: SV_OutputCont
     VertexOut hOut;
     hOut.position = patch[i].position;
     hOut.normal = patch[i].normal;
+    hOut.instanceID = patch[i].instanceID;
     return hOut;
 }

@@ -79,6 +79,9 @@ namespace GEM{
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> mSRVHeap;
         std::array<Microsoft::WRL::ComPtr<ID3D12Resource>, sFrameCount> mRenderTargets;
 
+        Microsoft::WRL::ComPtr<D3D12MA::Allocation> mUploadBuffer;
+        size_t mUploadOffset = 0;
+
 		HANDLE mFenceEvent = nullptr;
 		UINT64 mFenceValue = 0;
         UINT mRTVDescriptorSize = 0;
