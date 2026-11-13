@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.28)
+
+project(GemStone VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+option(GEMSTONE_BUILD_DOCUMENTATION
+    "Build the GemStone API documentation with Doxygen"
+    OFF
+)
+
+include(cmake/Dependencies.cmake)
+include(cmake/dxc.cmake)
+
+add_subdirectory(Engine)
+add_subdirectory(Sandbox)
+
+if(GEMSTONE_BUILD_DOCUMENTATION)
+    find_package(Doxygen REQUIRED)
+
+    add_custom_target(documentation
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_SOURCE_DIR}/build/docs
+        COMMAND ${DOXYGEN_EXECUTABLE} ${CMAKE_SOURCE_DIR}/docs/Doxyfile
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Generating GemStone API documentation"
+        VERBATIM
+    )
+endif()

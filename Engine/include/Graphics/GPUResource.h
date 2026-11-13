@@ -1,0 +1,207 @@
+#pragma once
+namespace GEM{
+    class GPUResource{
+    public:
+        ID3D12Resource* GetResource() const {
+            if (mAllocation) {
+                return mAllocation->GetResource();
+            }
+            return nullptr;
+        }
+        void Reset() {
+            mAllocation.Reset();
+        }
+
+    protected:
+        Microsoft::WRL::ComPtr<D3D12MA::Allocation> mAllocation;
+
+        friend class ResourceFactory;
+        friend class RenderTargetManager;
+    };
+
+    class GPUBuffer : public GPUResource{
+    public:
+        uint64_t GetSize() const {
+            return mSize;
+        }
+    protected:
+        uint64_t mSize = 0;
+    };
+
+    class VertexBuffer : public GPUBuffer{
+    public:
+        const D3D12_VERTEX_BUFFER_VIEW& GetView() const {
+            return mView;
+        }
+
+        uint32_t GetVertexCount() const {
+            return mVertexCount;
+        }
+    private:
+        D3D12_VERTEX_BUFFER_VIEW mView{};
+        uint32_t mVertexCount = 0;
+        uint32_t mStride = 0;
+
+        friend class ResourceFactory;
+    };
+
+    class IndexBuffer : public GPUBuffer {
+    public:
+        const D3D12_INDEX_BUFFER_VIEW& GetView() const {
+            return mView;
+        }
+
+        uint32_t GetIndexCount() const {
+            return mIndexCount;
+        }
+    private:
+        D3D12_INDEX_BUFFER_VIEW mView{};
+        uint32_t mIndexCount = 0;
+        uint32_t mStride = 0;
+
+        friend class ResourceFactory;
+    };
+
+    class GPUTexture : public GPUResource {
+    public:
+        const D3D12_RESOURCE_DESC& GetDescription() const {
+            return mDescription;
+        }
+
+        DXGI_FORMAT GetFormat() const {
+            return mDescription.Format;
+        }
+
+        UINT GetWidth() const {
+            return static_cast<UINT>(mDescription.Width);
+        }
+
+        UINT GetHeight() const {
+            return mDescription.Height;
+        }
+
+        D3D12_RESOURCE_STATES GetState() const {
+            return mState;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE GetUAV() const {
+            return mUAVGPU;
+        }
+
+    protected:
+        D3D12_RESOURCE_DESC mDescription{};
+        D3D12_RESOURCE_STATES mState = D3D12_RESOURCE_STATE_COMMON;
+        D3D12_GPU_DESCRIPTOR_HANDLE mUAVGPU{};
+        D3D12_CPU_DESCRIPTOR_HANDLE mUAVCPU{};
+
+        friend class ResourceFactory;
+        friend class RenderTargetManager;
+        friend class GraphicsCommands;
+    };
+
+    class RenderTarget : public GPUTexture {
+    public:
+        D3D12_CPU_DESCRIPTOR_HANDLE GetRTV() const {
+            return mRTV;
+        }
+
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const {
+            return mSRVCPU;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRV() const {
+            return mSRVGPU;
+        }
+
+    private:
+        D3D12_CPU_DESCRIPTOR_HANDLE mRTV{};
+        D3D12_CPU_DESCRIPTOR_HANDLE mSRVCPU{};
+        D3D12_GPU_DESCRIPTOR_HANDLE mSRVGPU{};
+
+        D3D12_CLEAR_VALUE mClearValue{};
+
+        friend class ResourceFactory;
+        friend class RenderTargetManager;
+    };
+
+    class DepthTarget : public GPUTexture {
+    public:
+        D3D12_CPU_DESCRIPTOR_HANDLE GetDSV() const {
+            return mDSV;
+        }
+
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const {
+            return mSRVCPU;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRV() const {
+            return mSRVGPU;
+        }
+
+    private:
+        D3D12_CPU_DESCRIPTOR_HANDLE mDSV{};
+        D3D12_CPU_DESCRIPTOR_HANDLE mSRVCPU{};
+        D3D12_GPU_DESCRIPTOR_HANDLE mSRVGPU{};
+
+        D3D12_CLEAR_VALUE mClearValue{};
+
+        friend class ResourceFactory;
+        friend class RenderTargetManager;
+    };
+
+    template <typename T>
+    class ConstantBuffer : public GPUBuffer {
+        static_assert(sizeof(T) < (64 * 1024));
+    public:
+        D3D12_GPU_VIRTUAL_ADDRESS GetAddress() const {
+            return mAllocation->GetResource()->GetGPUVirtualAddress();
+        }
+
+        void Upload(const T& data){
+            assert(mMappedData);
+
+            std::memcpy(mMappedData, &data, sizeof(T));
+        }
+    private:
+        void* mMappedData = nullptr;
+
+        ConstantBuffer() = default;
+        friend class ResourceFactory;
+    };
+
+    template <typename T, size_t Capacity>
+    class StructuredBuffer : public GPUBuffer{
+    public:
+        static_assert(Capacity > 0);
+        static_assert(std::is_trivially_copyable_v<T>);
+        static_assert(sizeof(T) % 4 == 0);
+
+        static constexpr size_t GetCapacity() noexcept {
+            return Capacity;
+        }
+
+        static constexpr UINT GetStride() noexcept {
+            return static_cast<UINT>(sizeof(T));
+        }
+
+        UINT GetElementCount() const noexcept {
+            return mElementCount;
+        }
+
+        D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const noexcept {
+            return mSRVCPU;
+        }
+
+        D3D12_GPU_DESCRIPTOR_HANDLE GetSRV() const noexcept {
+            return mSRVGPU;
+        }
+
+    private:
+        D3D12_CPU_DESCRIPTOR_HANDLE mSRVCPU{};
+        D3D12_GPU_DESCRIPTOR_HANDLE mSRVGPU{};
+
+        UINT mElementCount = 0;
+
+        friend class ResourceFactory;
+    };
+}
