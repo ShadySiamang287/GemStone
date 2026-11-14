@@ -113,7 +113,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     for (int i = 0; i < totalPlanetCount; i++) {
         GraphicsCommands::RebuildBLAS(*mBLASes[i].get());
         glm::mat4x4 translation =  glm::translate({1.f}, mPlanetData[i].position);
-        tlasPtr->AddInstance(*mBLASes[i].get(), i, 0x01, glm::mat4x3(translation));
+        tlasPtr->AddInstance(*mBLASes[i].get(), i, 0, 0x01, glm::mat4x3(translation));
     }
 
     GraphicsCommands::RebuildTLAS(*tlasPtr);
@@ -202,8 +202,8 @@ void DeferredPass::OnImGuiRender() {
 void DeferredPass::GenerateBaseMesh() {
     constexpr float radius = 1.f;
     constexpr float inverseRad = 1.f / radius;
-    constexpr int stackCount = 40;
-    constexpr int sectorCount = 40;
+    constexpr int stackCount = 60;
+    constexpr int sectorCount = 60;
 
     constexpr float sectorStep = (2 * std::numbers::pi_v<float>) / static_cast<float>(sectorCount);
     constexpr float stackStep = std::numbers::pi_v<float> / static_cast<float>(stackCount);

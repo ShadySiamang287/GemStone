@@ -35,7 +35,7 @@ namespace GEM{
     public:
         ~TLAS();
 
-        void AddInstance(BLAS& targetBlas, UINT instanceID, UINT mask, glm::mat4x3 transform);
+        void AddInstance(BLAS& targetBlas, UINT instanceID, UINT hitContribution, UINT mask, glm::mat4x3 transform);
         void Clear();
 
         D3D12_CPU_DESCRIPTOR_HANDLE GetSRVCPU() const noexcept {
@@ -54,7 +54,6 @@ namespace GEM{
 
         std::vector<D3D12_RAYTRACING_INSTANCE_DESC> mInstanceDescs;
         std::vector<BLAS*> mBLASes;
-        UINT mNextHitGroupOffset = 0;
         UINT mCapacity = 0;
 
         UINT64 mScratchSize = 0;

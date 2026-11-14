@@ -1,4 +1,3 @@
-
 struct AtmosphereData {
     float3 position;
     float3 atmosphereColour;
@@ -23,36 +22,41 @@ cbuffer FrameData : register(b0)
     float3 _padding;
 }
 
-
-// cbuffer AtmosphereData : register(b1) {
-//     float3 atmosphereColour;
-//     float planetRadius;
-//     float atmosphereRadius;
-//     float densityFalloff;
-//     float strengthMultiplier;
-//     int steps;
-// }
-
-bool RaySphere(float3 origin, float3 direction, float radius, out float t0, out float t1) {
-    t0 = 0.0;
-    t1 = 0.0;
-
-    float b = dot(origin, direction);
-    float c = dot(origin, origin) - radius * radius;
-    float disc = b * b - c;
-    if (disc < 0.0)
-        return false;
-
-    float s = sqrt(disc);
-    t0 = -b - s;
-    t1 = -b + s;
-    return true;
-}
+#define MAX_ATMOS 5
 
 struct Payload {
     float hitT;
     uint instanceID;
+
+    float atmosphereTNear[MAX_ATMOS];
+    float atmosphereTFar[MAX_ATMOS];
+    uint seenMask;
 };
+
+float MarchOpticalDepth(AtmosphereData d, float3 origin, float3 dir, float tNear, float tFar) {
+    float pathLength = tFar - tNear;
+    if (pathLength <= 0.0) {
+        return 0.0;
+    }
+
+    float stepSize = pathLength / (float)d.steps;
+    float thickness = d.atmosphereRadius - d.planetRadius;
+
+    float opticalDepth = 0.0;
+
+    for (int i = 0; i < d.steps; i++)
+    {
+        float3 samplePoint = origin + dir * (tNear + (i + 0.5) * stepSize);
+
+        float distFromCenter = length(samplePoint - d.position);
+        float altitude = saturate((distFromCenter - d.planetRadius) / thickness);
+        float density = exp(-altitude * d.densityFalloff);
+
+        opticalDepth += density * stepSize;
+    }
+
+    return opticalDepth;
+}
 
 [shader("raygeneration")]
 void rayGen() {
@@ -65,8 +69,6 @@ void rayGen() {
     float3 rayDir = normalize(mul(invViewMatrix, float4(viewPos, 0.0)).xyz);
     float3 rayOrigin = mul(invViewMatrix, float4(0, 0, 0, 1)).xyz;
 
-    float tNear, tFar;
-
     RayDesc ray;
     ray.Origin = rayOrigin;
     ray.Direction = rayDir;
@@ -75,51 +77,59 @@ void rayGen() {
 
     Payload p;
     p.hitT = -1.0f;
-
-    TraceRay(accelStructure, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0x02, 0, 1, 0, ray, p);
-    if (p.hitT < 0.0) {
-        return;
-    }
-    tFar = p.hitT;
-    p.hitT = -1.0f;
-    TraceRay(accelStructure, RAY_FLAG_CULL_FRONT_FACING_TRIANGLES, 0x02, 0, 1, 0, ray, p);
-    tNear = (p.hitT >= 0.0) ? p.hitT : 0.0;
-    
-    uint instanceID = p.instanceID;
-
-    ray.TMin = tNear;
-    ray.TMax = tFar;
-    p.hitT = -1.0f;
-    TraceRay(accelStructure, RAY_FLAG_NONE, 0x01, 0, 1, 0, ray, p);
-    if (p.hitT >= 0.0) tFar = min(tFar, p.hitT);
-    
-    AtmosphereData atmosphere = atmosphereBuffer[instanceID - 4];
-
-    float pathLength = tFar - tNear;
-    if (pathLength <= 0.0) {
-        return;
+    p.instanceID = 0;
+    p.seenMask = 0;
+    [unroll] for (uint k = 0; k < MAX_ATMOS; k++) {
+        p.atmosphereTNear[k] = -1.0f;
+        p.atmosphereTFar[k] = 1e30f;
     }
 
-    float stepSize = pathLength / (float)atmosphere.steps;
-    float thickness = atmosphere.atmosphereRadius - atmosphere.planetRadius;
+    TraceRay(accelStructure, RAY_FLAG_NONE, 0xFF, 0, 1, 0, ray, p);
+    float sceneT = (p.hitT >= 0.0) ? p.hitT : 1e30;
 
-    float opticalDepth = 0.0;
+    float spanT0[MAX_ATMOS];
+    float spanT1[MAX_ATMOS];
+    uint spanIdx[MAX_ATMOS];
+    uint n = 0;
 
-    for (int i = 0; i < atmosphere.steps; i++)
-    {
-        float3 samplePoint = rayOrigin + rayDir * (tNear + (i + 0.5) * stepSize);
+    for (uint i = 0; i < MAX_ATMOS; i++) {
+        if ((p.seenMask & (1u << i)) == 0) continue;
 
-        float distFromCenter = length(samplePoint - atmosphere.position);
-        float altitude = saturate((distFromCenter - atmosphere.planetRadius) / thickness);
-        float density = exp(-altitude * atmosphere.densityFalloff);
+        AtmosphereData d = atmosphereBuffer[i];
+        bool inside = length(rayOrigin - d.position) < d.atmosphereRadius;
 
-        opticalDepth += density * stepSize;
+        float t0 = inside ? 0.0 : p.atmosphereTNear[i];
+        if (!inside && t0 < 0.0) continue;
+
+        float t1 = min(p.atmosphereTFar[i], sceneT);
+        if (t1 <= t0) continue;
+
+        spanT0[n] = t0;
+        spanT1[n] = t1;
+        spanIdx[n] = i;
+        n++;
     }
 
-    float alpha = 1.0 - exp(-opticalDepth * atmosphere.strengthMultiplier);
-    float4 col = float4(atmosphere.atmosphereColour, alpha);
+    /// gpu insertion sort which is evil.
+    for (uint a = 1; a < n; a++) {
+        float k0 = spanT0[a], k1 = spanT1[a]; uint ki = spanIdx[a];
+        int b = (int)a - 1;
+        while (b >= 0 && spanT0[b] < k0) {
+            spanT0[b + 1] = spanT0[b]; spanT1[b + 1] = spanT1[b]; spanIdx[b + 1] = spanIdx[b];
+            b--;
+        }
+        spanT0[b + 1] = k0; spanT1[b + 1] = k1; spanIdx[b + 1] = ki;
+    }
 
-    outputTexture[launchIndex.xy] = float4(lerp(outputTexture[launchIndex].rgb, col.rgb, col.a), 1.0);
+    float3 col = outputTexture[launchIndex.xy].rgb;
+    for (uint s = 0; s < n; s++) {
+        AtmosphereData d = atmosphereBuffer[spanIdx[s]];
+        float opticalDepth = MarchOpticalDepth(d, rayOrigin, rayDir, spanT0[s], spanT1[s]);
+        float alpha = 1.0 - exp(-opticalDepth * d.strengthMultiplier);
+        col = lerp(col, d.atmosphereColour, alpha);
+    }
+
+    outputTexture[launchIndex.xy] = float4(col, 1.0);
 }
 
 [shader("miss")]
@@ -128,7 +138,22 @@ void miss(inout Payload payload) {
 }
 
 [shader("closesthit")]
-void closestHit(inout Payload payload, in BuiltInTriangleIntersectionAttributes attr) {
+void OpaqueClosestHit(inout Payload payload, in BuiltInTriangleIntersectionAttributes attr) {
     payload.hitT = RayTCurrent();
     payload.instanceID = InstanceID();
+}
+
+[shader("anyhit")]
+void AtmosphereAnyHit(inout Payload payload, in BuiltInTriangleIntersectionAttributes attr) {
+    float tCurrent = RayTCurrent();
+    uint i = InstanceID() - 4;
+    
+    payload.seenMask |= (1u << i);
+    if (HitKind() == HIT_KIND_TRIANGLE_FRONT_FACE) {
+        payload.atmosphereTNear[i]   = tCurrent;
+    } else {
+        payload.atmosphereTFar[i] = tCurrent;
+    }
+
+    IgnoreHit();
 }

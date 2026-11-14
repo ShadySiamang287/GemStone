@@ -70,13 +70,19 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
 
     mRTRootSig = ResourceFactory::CreateRootSignature(rtRootDesc);
 
-    D3D12_HIT_GROUP_DESC defGroup{};
-    defGroup.HitGroupExport = L"DefaultHitGroup";
-    defGroup.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
-    defGroup.ClosestHitShaderImport = L"closestHit";
+    D3D12_HIT_GROUP_DESC opaqueGroup{};
+    opaqueGroup.HitGroupExport = L"OpaqueHitGroup";
+    opaqueGroup.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+    opaqueGroup.ClosestHitShaderImport = L"OpaqueClosestHit";
+
+    D3D12_HIT_GROUP_DESC atmosGroupDesc{};
+    atmosGroupDesc.HitGroupExport = L"AtmosphereHitGroup";
+    atmosGroupDesc.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES;
+    atmosGroupDesc.AnyHitShaderImport = L"AtmosphereAnyHit"; 
 
     RTPipelineDesc rtPipeDesc{};
-    rtPipeDesc.hitGroups.push_back(defGroup);
+    rtPipeDesc.hitGroups.push_back(opaqueGroup);
+    rtPipeDesc.hitGroups.push_back(atmosGroupDesc);
     rtPipeDesc.libraryBytecodes.push_back({"Shaders/AtmosphereRT.dxil"});
     rtPipeDesc.globalRootSig = mRTRootSig;
 
@@ -86,7 +92,9 @@ AtmospherePass::AtmospherePass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS*
     stDesc.pipeline = mRTPipeline.get();
     stDesc.rayGen = {L"rayGen"};
     stDesc.missShaders.push_back({L"miss"});
-    stDesc.hitGroups.push_back({L"DefaultHitGroup"});
+    stDesc.missShaders.push_back({L"miss"});
+    stDesc.hitGroups.push_back({L"OpaqueHitGroup"});
+    stDesc.hitGroups.push_back({L"AtmosphereHitGroup"});
     mShaderTable =  ResourceFactory::CreateShaderTable(stDesc);
 }
 
@@ -105,7 +113,7 @@ void AtmospherePass::Render(RenderTargetManager& manager, std::span<Model> model
         auto& data = mAtmosphereData[i];
         glm::mat4x4 translation =  glm::translate({1.f}, data.position);
         glm::mat4x4 transform = glm::scale(translation, glm::vec3{data.atmosphereRadius,data.atmosphereRadius,data.atmosphereRadius});
-        tlasPtr->AddInstance(*mBlas.get(), 4 + i, 0x02, glm::mat4x3(transform));
+        tlasPtr->AddInstance(*mBlas.get(), 4 + i, 1, 0x02, glm::mat4x3(transform));
     }
     GraphicsCommands::RebuildTLAS(*tlasPtr);
 
@@ -210,6 +218,6 @@ void AtmospherePass::GenerateBaseMesh() {
         ResourceFactory::CreateIndexBuffer(indices)
     });
 
-    mBlas = ResourceFactory::CreateBLAS(mModel.primitives[0], L"Atmosphere BLAS", true, 0, vertices.size(), 0, indices.size());
+    mBlas = ResourceFactory::CreateBLAS(mModel.primitives[0], L"Atmosphere BLAS", false, 0, vertices.size(), 0, indices.size());
 
 }

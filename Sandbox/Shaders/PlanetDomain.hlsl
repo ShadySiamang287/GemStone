@@ -73,10 +73,9 @@ VertexOutDS PlanetDS(PatchTess patchTress, float3 bary: SV_DomainLocation, const
     float3 posL = bary.x * tri[0].PosL + bary.y * tri[1].PosL + bary.z * tri[2].PosL;
     float3 normal = bary.x * tri[0].normal + bary.y * tri[1].normal + bary.z * tri[2].normal;
     float3 direction = normalize(posL);
+    
     float noise = FractalNoise(direction + planet.position, planet.roughness, planet.ridgeRoughness, planet.persistence);
-    
     float totalNoise = ShapeTerrain(noise) * planet.terrainStrength;
-    
     float displacedRadius = max(planet.radius, planet.radius + totalNoise);
     float3 displacedPosition = direction * displacedRadius;
 
