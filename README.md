@@ -1,5 +1,6 @@
 # Gemstone Engine
 This is a DirectX 12 test engine im developing that uses slang shaders. It compiles as a dll which is neat i guess. 
+The hlsl filse are in ./Sandbox/Shaders
 ## Dependencies
 ### Requirements
 
