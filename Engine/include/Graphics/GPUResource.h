@@ -120,6 +120,8 @@ namespace GEM{
 
         D3D12_CLEAR_VALUE mClearValue{};
 
+        float scale;
+
         friend class ResourceFactory;
         friend class RenderTargetManager;
     };

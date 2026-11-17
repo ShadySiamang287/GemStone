@@ -11,6 +11,7 @@ target_sources(Sandbox PRIVATE
     src/Camera.cpp
     src/RenderPasses/AtmospherePass.cpp
     src/RenderPasses/BloomPass.cpp
+    src/RenderPasses/ShadowPass.cpp
 )
 
 target_include_directories(Sandbox PRIVATE ${Sandbox_SOURCE_DIR}/include)
@@ -91,26 +92,6 @@ add_hlsl_shader(
 
 add_hlsl_shader(
     TARGET GemStoneShaders
-    NAME AtmosphereVS
-    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Atmosphere.hlsl"
-    ENTRY atmosphereVS
-    PROFILE vs_6_6
-    INCLUDE_DIRS
-        "${Sandbox_SOURCE_DIR}/Shaders"
-    ALL
-)
-
-add_hlsl_shader(
-    TARGET GemStoneShaders
-    NAME AtmospherePS
-    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/Atmosphere.hlsl"
-    ENTRY atmospherePS
-    PROFILE ps_6_6
-    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
-)
-
-add_hlsl_shader(
-    TARGET GemStoneShaders
     NAME BloomPS
     SOURCE "${Sandbox_SOURCE_DIR}/Shaders/bloom.hlsl"
     ENTRY BloomPS
@@ -131,6 +112,15 @@ add_hlsl_shader(
     TARGET GemStoneShaders
     NAME AtmosphereRT
     SOURCE "${Sandbox_SOURCE_DIR}/Shaders/AtmosphereRT.hlsl"
+    ENTRY 
+    PROFILE lib_6_6
+    INCLUDE_DIRECTORIES "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
+add_hlsl_shader( 
+    TARGET GemStoneShaders
+    NAME ShadowRT
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/ShadowRT.hlsl"
     ENTRY 
     PROFILE lib_6_6
     INCLUDE_DIRECTORIES "${Sandbox_SOURCE_DIR}/Shaders"

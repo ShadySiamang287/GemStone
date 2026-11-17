@@ -63,14 +63,22 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
         DXGI_FORMAT_R16G16B16A16_FLOAT,
         width,
         height,
-        sceneClearColour
+        sceneClearColour,
+        0.5f
     );
     auto mBloomTarget2 = &mRenderTargetsPtr->CreateRenderTarget(
         L"Bloom Pong",
         DXGI_FORMAT_R16G16B16A16_FLOAT,
         width,
         height,
-        sceneClearColour
+        sceneClearColour,
+        0.5f
+    );
+    auto shadowMask = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Shadow Mask",
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        width,
+        height
     );
     
     mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", width, height);

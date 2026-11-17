@@ -88,8 +88,8 @@ void BloomPass::Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> 
     GraphicsCommands::BindViewport(
         0.f,
         0.f,
-        static_cast<float>(manager.GetWidth()),
-        static_cast<float>(manager.GetHeight()),
+        static_cast<float>(manager.GetWidth()) * 0.5f,
+        static_cast<float>(manager.GetHeight()) * 0.5f,
         0.f,
         1.f
     );
