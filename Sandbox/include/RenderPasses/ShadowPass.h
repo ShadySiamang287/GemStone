@@ -17,4 +17,7 @@ private:
     std::unique_ptr<GEM::ShaderTable> mShaderTable = nullptr;
     GEM::ConstantBuffer<GEM::FrameData>* mFrameDataBuffer = nullptr;
     GEM::StructuredBuffer<GEM::PointLight, 1024>* mLightBuffer = nullptr;
+
+    std::shared_ptr<GEM::RootSignature> mRootSig; 
+    std::unique_ptr<GEM::GraphicsPipeline> mPipeline;
 };

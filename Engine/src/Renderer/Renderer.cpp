@@ -80,6 +80,12 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
         width,
         height
     );
+    auto shadowPing = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Shadow Ping",
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        width,
+        height
+    );
     
     mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", width, height);
 

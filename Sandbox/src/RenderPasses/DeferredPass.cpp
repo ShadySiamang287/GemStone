@@ -202,8 +202,8 @@ void DeferredPass::OnImGuiRender() {
 void DeferredPass::GenerateBaseMesh() {
     constexpr float radius = 1.f;
     constexpr float inverseRad = 1.f / radius;
-    constexpr int stackCount = 60;
-    constexpr int sectorCount = 60;
+    constexpr int stackCount = 100;
+    constexpr int sectorCount = 100;
 
     constexpr float sectorStep = (2 * std::numbers::pi_v<float>) / static_cast<float>(sectorCount);
     constexpr float stackStep = std::numbers::pi_v<float> / static_cast<float>(stackCount);

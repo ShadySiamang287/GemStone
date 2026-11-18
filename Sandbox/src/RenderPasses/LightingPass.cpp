@@ -130,7 +130,7 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
     auto* normalTarget = manager.GetRenderTarget(L"Normal GBuffer");
     auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
     auto* lightingTarget = manager.GetRenderTarget(L"Scene Color");
-    auto* shadowMask = manager.GetRenderTarget(L"Shadow Mask");
+    auto* shadowMask = manager.GetRenderTarget(L"Shadow Ping");
 
     GraphicsCommands::BeginLabel(PIX_COLOR(255, 82, 124), "Lighting Pass");
     GraphicsCommands::TransitionRTV(
