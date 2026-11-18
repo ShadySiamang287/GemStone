@@ -5,7 +5,7 @@ SamplerState LinearSampler : register(s0);
 
 static const float sigma = 10.f;
 static const float bSigma = 0.5f;
-static const uint mSize = 15;
+static const uint mSize = 11;
 
 float normpdf(float x, float sigma)
 {

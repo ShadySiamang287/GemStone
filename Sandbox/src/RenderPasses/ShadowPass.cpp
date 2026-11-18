@@ -147,7 +147,7 @@ ShadowPass::ShadowPass(GEM::ConstantBuffer<GEM::FrameData>* frameDataBuffer,  GE
     mRootSig = ResourceFactory::CreateRootSignature(fullscreenRootDesc);
 
     GraphicsPipelineDescription pipDesc;
-    pipDesc.name = L"Bloom Pipeline";
+    pipDesc.name = L"Bilateral Filter Pipeline";
     pipDesc.rootSignature = mRootSig;
     pipDesc.vertexShader = {"Shaders/FullscreenVS.dxil"};
     pipDesc.pixelShader = {"Shaders/BileteralFilterPS.dxil"};
