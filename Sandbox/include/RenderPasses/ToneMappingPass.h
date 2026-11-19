@@ -11,7 +11,7 @@ enum class ToneMappingType : uint32_t {
     };
 
 struct ToneMappingData{
-    float exposure = 0.1;
+    float exposure = 0.15;
     float hableLuminance = 11.2;
     ToneMappingType type = ToneMappingType::AECS;
     float bloomStrength = 0.15f; 

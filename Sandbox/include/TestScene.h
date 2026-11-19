@@ -17,6 +17,6 @@ private:
 
     std::vector<GEM::PointLight> mLights;
     glm::vec3 ambientLight = { 1.f, 1.f, 1.f };
-    float ambientStrength = { 0.f };
+    float ambientStrength = { 0.5f };
     Camera mCamera;
 };

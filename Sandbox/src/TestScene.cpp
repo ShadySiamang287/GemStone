@@ -20,6 +20,15 @@ TestScene::TestScene() {
 
     mModels.push_back(std::move(planet));
     mCamera.cameraPos = glm::vec3(0.f ,0.f, 30.f);
+
+    mLights.push_back({
+        {12.f, 1.f, 0.f, 100.f},
+        {1.f, 1.f, 1.f, 100.f}
+        });
+    mLights.push_back({
+        {11.f, 3.f, 1.f, 100.f},
+        {1.f, 1.f, 1.f, 100.f}
+    });
 }
 
 void TestScene::Update(GEM::Input& input, GEM::Renderer& renderer, float dt) {

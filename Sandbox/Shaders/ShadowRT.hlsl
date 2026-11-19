@@ -80,7 +80,7 @@ void shadowRayGen() {
     float3 camPos = float3(invViewMatrix[0][3], invViewMatrix[1][3], invViewMatrix[2][3]);
 
     float camDist = length(worldPos - camPos);
-    float bias = max(0.05, camDist * 1e-3);
+    float bias = max(0.13, camDist * 1e-3);
 
     float4 vis = float4(1, 1, 1, 1); // 1 = fully lit
     int count = min(lightCount, 4);
