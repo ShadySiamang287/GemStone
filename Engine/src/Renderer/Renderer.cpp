@@ -135,12 +135,12 @@ void Renderer::Resize(UINT width, UINT height) {
 void Renderer::Render(Scene* scene) {
     GraphicsCommands::BeginFrame();
     mImGuiContext->BeginFrame();
-    mFrameDataBuffer->Upload(mFrameData);
     if (updateLights) {
         GraphicsCommands::CopyDataToBuffer(mPointLightBuffer->GetResource(), currentLights.data(), currentLights.size_bytes());
         mFrameData.lightCount = currentLights.size();
         updateLights = false;
     }
+    mFrameDataBuffer->Upload(mFrameData);
     mTLASPtr->Clear();
     auto models = scene->GetModels();
 

@@ -32,6 +32,7 @@ private:
 	std::shared_ptr<RootSignature> mRootSig; 
 	std::shared_ptr<RootSignature> mComputeSig;
 	std::unique_ptr<GraphicsPipeline> mPipeline;
+	std::unique_ptr<GraphicsPipeline> mWireframePipeline;
 	ConstantBuffer<FrameData>* mFrameDataBuffer = nullptr;
 	std::unique_ptr<StructuredBuffer<PlanetData, 5>> mPlanetDataBuffer = nullptr;
 	std::unique_ptr<ConstantBuffer<TesselationData>> mTesselationDataBuffer = nullptr;
@@ -49,6 +50,8 @@ private:
 	static constexpr int sMaxPlanets = 5;
 	int planetVertexCount = 0;
 	int planetIndexCount = 0;
+
+	bool wireframe = false;
 
 	Model mPlanetMesh;
 	void GenerateBaseMesh();

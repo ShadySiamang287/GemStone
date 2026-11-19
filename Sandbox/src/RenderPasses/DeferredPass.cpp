@@ -71,6 +71,10 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tla
     desc.wireframe = false;
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
 
+    desc.wireframe = true;
+    desc.name = L"Wireframe Planet pipeline";
+    mWireframePipeline = ResourceFactory::CreateGraphicsPipeline(desc);
+
     D3D12_ROOT_PARAMETER param;
     param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
     param.Descriptor.ShaderRegister = 0; // Binds to register(u0)
@@ -146,7 +150,12 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::ClearRenderTarget(*normalTarget, mClearColour.data());
     GraphicsCommands::ClearDepthStencil(*depthTarget);
 
-    GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    if (wireframe) {
+        GraphicsCommands::BindGraphicsPipeline(*mWireframePipeline.get());
+    }
+    else {
+        GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    }
     GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
 	GraphicsCommands::BindSRV(1, mPlanetDataBuffer->GetSRV());
 	GraphicsCommands::SetGraphicsConstantBufferView(2, mTesselationDataBuffer->GetAddress());
@@ -173,6 +182,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
 
 void DeferredPass::OnImGuiRender() {
     ImGui::Begin("Planet Pass");
+    ImGui::Checkbox("Wireframe", &wireframe);
     ImGui::SliderInt("Planet Count", &totalPlanetCount, 1, 5);
     ImGui::SeparatorText("Tesselation Settings");
 	ImGui::SliderFloat("Max Tesselation", &mTesselationData.maxTess, 1.f, 64.f);
@@ -202,8 +212,8 @@ void DeferredPass::OnImGuiRender() {
 void DeferredPass::GenerateBaseMesh() {
     constexpr float radius = 1.f;
     constexpr float inverseRad = 1.f / radius;
-    constexpr int stackCount = 100;
-    constexpr int sectorCount = 100;
+    constexpr int stackCount = 40;
+    constexpr int sectorCount = 40;
 
     constexpr float sectorStep = (2 * std::numbers::pi_v<float>) / static_cast<float>(sectorCount);
     constexpr float stackStep = std::numbers::pi_v<float> / static_cast<float>(stackCount);

@@ -22,8 +22,10 @@ cbuffer FrameData : register(b0)
     float4x4 ProjectionMatrix;
     float4x4 invViewMatrix;
     float4x4 invProjectionMatrix;
+    float3 amibentLight;
+    float ambientStrength;
     int lightCount;
-    float3 _padding;
+    float3 padding;
 }
 
 StructuredBuffer<PlanetData> planetDataBuffer : register(t0);

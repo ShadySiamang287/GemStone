@@ -6,8 +6,10 @@ cbuffer FrameData : register(b0)
     float4x4 ProjectionMatrix;
     float4x4 invViewMatrix;
     float4x4 invProjectionMatrix;
+    float3 ambientLight;
+    float ambientStrength;
     int lightCount;
-    float3 _padding;
+    float3 padding;
 }
 
 Texture2D albedo : register(t0);
@@ -62,6 +64,7 @@ float4 LightingPS(FullScreenVertOut input) : SV_Target0{
     float3 worldPos = ReconstructWorldPosition(input.uv, depthSample);
     float3 normal = normalize(normalSample.xyz * 2.0f - 1.0f);
 
+    float3 totalLighting = float3(0.f, 0.f, 0.f);
     for (int i = 0; i < lightCount; ++i) {
         float shadowValue = 1.f;
         
@@ -71,8 +74,11 @@ float4 LightingPS(FullScreenVertOut input) : SV_Target0{
         }
         PointLight light = pointLights[i];
         float3 lightContribution = CalculatePointLight(light, worldPos, normal);
-        colour.rgb += lightContribution * shadowValue;
+        totalLighting += lightContribution * shadowValue;
     }
 
-    return colour;
+    float3 ambient = ambientLight * ambientStrength;
+    float4 output = float4(colour * (ambient + totalLighting), 1.f);
+
+    return output;
 }

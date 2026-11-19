@@ -13,8 +13,10 @@ namespace GEM{
         glm::mat4 ProjectionMatrix;
         glm::mat4 inverseViewMatrix;
         glm::mat4 inverseProjMat;
+        glm::vec3 ambientLight;
+        float ambientStrength;
         int lightCount;
-        glm::vec3 _padding;
+        glm::vec3 padding;
     };
 
     struct PointLight {

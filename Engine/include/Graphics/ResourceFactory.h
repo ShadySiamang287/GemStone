@@ -59,7 +59,7 @@ namespace GEM{
 
             auto buffer = std::unique_ptr<ConstantBuffer<T>>(new ConstantBuffer<T>());
             
-            size_t bufferSize = (sizeof(T) + 255) & ~255;
+            size_t bufferSize = (sizeof(T) + 16) & ~16;
             D3D12_RESOURCE_DESC resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(bufferSize);
             
             D3D12MA::ALLOCATION_DESC defaultDesc {};

@@ -28,6 +28,7 @@ void TestScene::Update(GEM::Input& input, GEM::Renderer& renderer, float dt) {
 
     if (!mLights.empty())
         renderer.UpdateLights(mLights);
+    renderer.SetAmbientLight(ambientStrength, ambientLight);
 }
 
 std::vector<GEM::Vertex> TestScene::GeneratePlanetVertices(){
@@ -100,6 +101,8 @@ std::vector<uint32_t> TestScene::GeneratePlanetIndices(){
 void TestScene::OnImGuiRenderer() {
     ImGui::Begin("Lights");
     ImGui::Text("Camera pos, X: %f, Y: %f, Z: %f", mCamera.cameraPos.x, mCamera.cameraPos.y, mCamera.cameraPos.z);
+    ImGui::ColorEdit3("Ambient Light", &ambientLight.x);
+    ImGui::SliderFloat("Ambient Strength", &ambientStrength, 0.f, 1.f);
     if (ImGui::Button("Add Light")) {
         mLights.push_back({});
     }
