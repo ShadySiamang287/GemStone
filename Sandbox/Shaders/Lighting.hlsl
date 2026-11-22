@@ -78,7 +78,7 @@ float4 LightingPS(FullScreenVertOut input) : SV_Target0{
     }
 
     float3 ambient = ambientLight * ambientStrength;
-    float4 output = float4(colour * (ambient + totalLighting), 1.f);
+    float4 output = float4(colour.rgb * (ambient + totalLighting), 1.f);
 
     return output;
 }

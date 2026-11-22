@@ -81,7 +81,12 @@ void rayGen() {
     p.hitT = -1.0f;
     p.instanceID = 0;
     p.seenMask = 0;
-    [unroll] for (uint k = 0; k < MAX_ATMOS; k++) {
+
+    AtmosphereData atmospheres[MAX_ATMOS];
+
+    [unroll]
+    for (uint k = 0; k < MAX_ATMOS; k++) {
+        atmospheres[k] = atmosphereBuffer[k];
         p.atmosphereTNear[k] = -1.0f;
         p.atmosphereTFar[k] = 1e30f;
     }
@@ -93,6 +98,8 @@ void rayGen() {
     float spanT1[MAX_ATMOS];
     uint spanIdx[MAX_ATMOS];
     uint n = 0;
+
+    
 
     for (uint i = 0; i < MAX_ATMOS; i++) {
         if ((p.seenMask & (1u << i)) == 0) continue;
@@ -125,7 +132,7 @@ void rayGen() {
 
     float3 col = outputTexture[launchIndex.xy].rgb;
     for (uint s = 0; s < n; s++) {
-        AtmosphereData d = atmosphereBuffer[spanIdx[s]];
+        AtmosphereData d = atmospheres[spanIdx[s]];
         float opticalDepth = MarchOpticalDepth(d, rayOrigin, rayDir, spanT0[s], spanT1[s]);
         float alpha = 1.0 - exp(-opticalDepth * d.strengthMultiplier);
         col = lerp(col, d.atmosphereColour, alpha);

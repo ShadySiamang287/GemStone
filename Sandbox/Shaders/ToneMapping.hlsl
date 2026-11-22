@@ -92,6 +92,9 @@ float3 agx(float3 colour) {
     colour = agxContrastApprox(colour);
     colour = mul(AGX_OUTPUT_MATRIX, colour);
 
+    // convert back to RGB from sRGB
+    colour = pow(max(colour, 0.0), 2.2);
+
     return colour;
 }
 
