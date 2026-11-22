@@ -18,6 +18,7 @@ public:
 private:
     std::shared_ptr<GEM::RootSignature> mRootSig; 
     std::unique_ptr<GEM::GraphicsPipeline> mPipeline;
+    std::unique_ptr<GEM::GraphicsPipeline> mBrightnessPipeline;
     BloomData mData;
     std::unique_ptr<GEM::ConstantBuffer<BloomData>> mConstantBuffer;
 };

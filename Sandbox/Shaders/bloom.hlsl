@@ -47,4 +47,13 @@ float4 BloomPS(FullScreenVertOut input) : SV_Target {
     }
     return float4(result, 1.0);
 }
-    
+
+float4 BrightnessExtract(FullScreenVertOut input) : SV_Target {
+    float4 colour = bloomImage.SampleLevel(LinearSampler, input.uv, 0);
+    float brightness = dot(colour.rgb, float3(0.2126, 0.7152, 0.0722));
+    if (brightness > 1.f) {
+        return colour;
+    } else {
+        return float4(0.f, 0.f, 0.f, 1.f);
+    }
+}

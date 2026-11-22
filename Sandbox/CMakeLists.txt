@@ -101,6 +101,15 @@ add_hlsl_shader(
 
 add_hlsl_shader(
     TARGET GemStoneShaders
+    NAME BrightnessExtract
+    SOURCE "${Sandbox_SOURCE_DIR}/Shaders/bloom.hlsl"
+    ENTRY BrightnessExtract
+    PROFILE ps_6_6
+    INCLUDE_DIRS "${Sandbox_SOURCE_DIR}/Shaders"
+)
+
+add_hlsl_shader(
+    TARGET GemStoneShaders
     NAME BileteralFilterPS
     SOURCE "${Sandbox_SOURCE_DIR}/Shaders/BiLateralFilter.hlsl"
     ENTRY BilateralFilter

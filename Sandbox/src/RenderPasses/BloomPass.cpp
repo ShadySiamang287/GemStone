@@ -61,10 +61,29 @@ BloomPass::BloomPass() {
 
     mPipeline = ResourceFactory::CreateGraphicsPipeline(bloomDesc);
 
+    GraphicsPipelineDescription brightDesc;
+    brightDesc.name = L"Brightness Extraction Pipeline";
+    brightDesc.rootSignature = mRootSig;
+    brightDesc.vertexShader = {"Shaders/FullscreenVS.dxil"};
+    brightDesc.pixelShader = {"Shaders/BrightnessExtract.dxil"};
+    brightDesc.renderTargetFormats = {DXGI_FORMAT_R16G16B16A16_FLOAT};
+    brightDesc.depthTest = false;
+    brightDesc.depthWrite = false;
+
+    mBrightnessPipeline = ResourceFactory::CreateGraphicsPipeline(brightDesc);
+
     mConstantBuffer = ResourceFactory::CreateConstantBuffer<BloomData>();
 }
 
 void BloomPass::Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> models) {
+    constexpr std::array<float, 4> clearColor = {
+        0.05f,
+        0.10f,
+        0.20f,
+        1.0f
+    };
+
+    auto* lightingOut = manager.GetRenderTarget(L"Scene Color");
     auto* bloomPing = manager.GetRenderTarget(L"Bloom Ping");
     auto* bloomPong = manager.GetRenderTarget(L"Bloom Pong");
     mData.horizontal = true;
@@ -73,16 +92,48 @@ void BloomPass::Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> 
     GraphicsCommands::BeginLabel(PIX_COLOR(172, 123, 48), "Bloom Pass");
     GraphicsCommands::TransitionRTV(
         *bloomPing, bloomPing->GetState(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
+    GraphicsCommands::TransitionRTV(
+        *lightingOut, lightingOut->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+    std::array<RenderTarget*, 1> targets = {
+        bloomPing
+    };
+
+    GraphicsCommands::BindRenderTargets(targets);
+    GraphicsCommands::BindGraphicsPipeline(*mBrightnessPipeline.get());
+    GraphicsCommands::BindViewport(
+        0.f,
+        0.f,
+        static_cast<float>(manager.GetWidth()) * 0.5f,
+        static_cast<float>(manager.GetHeight()) * 0.5f,
+        0.f,
+        1.f
+    );
+    GraphicsCommands::BindScissorRect(
+        0,
+        0,
+        static_cast<int>(manager.GetWidth()),
+        static_cast<int>(manager.GetHeight())
+    );
+    GraphicsCommands::BindSRV(0, lightingOut->GetSRV());
+    GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
+    GraphicsCommands::ClearRenderTarget(*bloomPing, clearColor.data());
+    GraphicsCommands::Draw(3, 1, 0, 0);
+
+    GraphicsCommands::TransitionRTV(
+        *bloomPing, bloomPing->GetState(),
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
     );
     GraphicsCommands::TransitionRTV(
         *bloomPong, bloomPong->GetState(),
         D3D12_RESOURCE_STATE_RENDER_TARGET
     );
-    std::array<RenderTarget*, 1> targets = {
+    targets = {
         bloomPong
     };
-
     GraphicsCommands::BindRenderTargets(targets);
     GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
     GraphicsCommands::BindViewport(
@@ -101,12 +152,6 @@ void BloomPass::Render(GEM::RenderTargetManager& manager, std::span<GEM::Model> 
     );
     GraphicsCommands::BindSRV(0, bloomPing->GetSRV());
     GraphicsCommands::SetGraphicsConstantBufferView(1, mConstantBuffer->GetAddress());
-        std::array<float, 4> clearColor = {
-        0.05f,
-        0.10f,
-        0.20f,
-        1.0f
-    };
     GraphicsCommands::ClearRenderTarget(*bloomPong, clearColor.data());
     GraphicsCommands::Draw(3, 1, 0, 0);
     GraphicsCommands::TransitionRTV(

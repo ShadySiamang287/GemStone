@@ -49,18 +49,13 @@ FragOut fragMain(VertexOutDS inVert)
         
     float slope = 1.0f - abs(dot(normal, up));
     float latitude = abs(inVert.direction.y);
-
-    float n = SimplexNoise(up * 40.0f) - 0.5f;
-    float h = height + n * 0.03f;
-    float s = slope  + n * 0.10f;
-
-
-    float landMask  = smoothstep(0.15f, 0.23f, height);
+    
+    float landMask = smoothstep(0.15f, 0.23f, height);
     float grassMask = smoothstep(0.25f, 0.8f, height);
 
     float rockHeightMask = smoothstep(0.8f, 0.85f, height);
-    float steepRockMask  = smoothstep(0.55f, 0.65f, slope);
-    float finalRock      = smoothstep(0.75f, 0.90f, slope);
+    float steepRockMask = smoothstep(0.55f, 0.65f, slope);
+    float finalRock = smoothstep(0.75f, 0.90f, slope);
 
     float coldLatitudeMask = smoothstep(0.75f, 0.92f, latitude);
     float highAltitudeSnow = smoothstep(0.85f, 0.95f, height);
@@ -77,13 +72,13 @@ FragOut fragMain(VertexOutDS inVert)
     float3 dirtColor = float3(0.50f, 0.38f, 0.25f);
 
     // Masks (all relative to sea level)
-    float beach = 1.0f - smoothstep(seaLevel + 0.01f, seaLevel + 0.06f, h);
-    float grass = smoothstep(seaLevel + 0.03f, seaLevel + 0.12f, h);
-    float dirt  = smoothstep(0.55f, 0.72f, h);
-    float rock  = max(smoothstep(0.55f, 0.75f, s), smoothstep(0.80f, 0.90f, h));
-    float snow  = max(smoothstep(0.85f, 0.95f, h),
-                      smoothstep(0.75f, 0.92f, latitude + n * 0.1f));
-    snow *= 1.0f - smoothstep(0.45f, 0.65f, s); 
+    float beach = 1.0f - smoothstep(seaLevel + 0.01f, seaLevel + 0.06f, height);
+    float grass = smoothstep(seaLevel + 0.03f, seaLevel + 0.12f, height);
+    float dirt = smoothstep(0.55f, 0.72f, height);
+    float rock = max(smoothstep(0.55f, 0.75f, slope), smoothstep(0.80f, 0.90f, height));
+    float snow = max(smoothstep(0.85f, 0.95f, height),
+                     smoothstep(0.75f, 0.92f, latitude));
+    snow *= 1.0f - smoothstep(0.45f, 0.65f, slope); 
 
     float3 land = grassColor;
     land = lerp(land, dirtColor, dirt * (1.0f - rock));

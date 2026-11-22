@@ -152,10 +152,10 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
     );
 
 
-    GraphicsCommands::TransitionDSV(
-        *depthTarget, depthTarget->GetState(),
-        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-    );
+    // GraphicsCommands::TransitionDSV(
+    //     *depthTarget, depthTarget->GetState(),
+    //     D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    // );
 
     GraphicsCommands::TransitionRTV(
         *lightingTarget,

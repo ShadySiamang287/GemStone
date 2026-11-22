@@ -661,42 +661,9 @@ std::unique_ptr<ProceduralBLAS> ResourceFactory::CreateProceduralBLAS(const D3D1
 	asDesc.ScratchAccelerationStructureData = blas->mScratchAllocation->GetResource()->GetGPUVirtualAddress();
 
 	GraphicsCommands::ExecuteImmediate([&](ID3D12GraphicsCommandList4* commandList) {
-  //      std::vector<D3D12_RESOURCE_BARRIER> preBarriers;
-		//D3D12_RESOURCE_BARRIER preVertex = CD3DX12_RESOURCE_BARRIER::Transition(
-		//	primitive.vertexBuffer->GetResource(),
-		//	D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
-		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-		//);
-
-
-		//preBarriers.push_back(preVertex);
-
-		//D3D12_RESOURCE_BARRIER preIndex = CD3DX12_RESOURCE_BARRIER::Transition(
-		//	primitive.indexBuffer->GetResource(),
-		//	D3D12_RESOURCE_STATE_INDEX_BUFFER,
-		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE
-		//);
-
-		//preBarriers.push_back(preIndex);
-  //      commandList->ResourceBarrier(preBarriers.size(), preBarriers.data());
-		commandList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
-
+	commandList->BuildRaytracingAccelerationStructure(&asDesc, 0, nullptr);
         std::vector<D3D12_RESOURCE_BARRIER> postBarriers;
-		//D3D12_RESOURCE_BARRIER vertex = CD3DX12_RESOURCE_BARRIER::Transition(
-		//	primitive.vertexBuffer->GetResource(),
-		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		//	D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER
-		//);
 
-		//postBarriers.push_back(vertex);
-
-		//D3D12_RESOURCE_BARRIER index = CD3DX12_RESOURCE_BARRIER::Transition(
-		//	primitive.indexBuffer->GetResource(),
-		//	D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE,
-		//	D3D12_RESOURCE_STATE_INDEX_BUFFER
-		//);
-
-		//postBarriers.push_back(index);
 
 		D3D12_RESOURCE_BARRIER uavBarrier = CD3DX12_RESOURCE_BARRIER::UAV(
             blas->GetResource()
@@ -739,7 +706,7 @@ std::unique_ptr<TLAS> ResourceFactory::CreateTLAS(UINT maxInstances) {
 		sContextPtr->mAllocator->CreateResource(
 			&defaultDesc,
 			&scratchDesc,
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_COMMON,
 			nullptr,
 			tlas->mScratchAllocation.GetAddressOf(),
 			IID_NULL,

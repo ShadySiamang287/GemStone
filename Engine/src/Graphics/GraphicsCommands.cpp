@@ -446,21 +446,6 @@ void GraphicsCommands::RebuildBLAS(BLAS& blas) {
 	D3D12MA::ALLOCATION_DESC defaultDesc{};
 	defaultDesc.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
-	// D3D12_RESOURCE_DESC scratchDesc = CD3DX12_RESOURCE_DESC::Buffer(info.UpdateScratchDataSizeInBytes);
-	// scratchDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
-
-	// THROW_IF_FAILED(
-	// 	sContextPtr->mAllocator->CreateResource(
-	// 		&defaultDesc,
-	// 		&scratchDesc,
-	// 		D3D12_RESOURCE_STATE_COMMON,
-	// 		nullptr,
-	// 		blas.mScratchAllocation.GetAddressOf(),
-	// 		IID_NULL,
-	// 		nullptr
-	// 	)
-	// );
-
 	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC asDesc = {};
 	asDesc.Inputs = inputs;
     asDesc.SourceAccelerationStructureData= blas.mAllocation->GetResource()->GetGPUVirtualAddress();
