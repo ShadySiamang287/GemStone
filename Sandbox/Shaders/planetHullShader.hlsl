@@ -7,8 +7,10 @@ cbuffer FrameData : register(b0)
     float4x4 ProjectionMatrix;
     float4x4 invViewMatrix;
     float4x4 invProjectionMatrix;
+    float3 ambientLight;
+    float ambientStrength;
     int lightCount;
-    float3 _padding;
+    float3 padding;
 }
 
 cbuffer TessellationData : register(b1)

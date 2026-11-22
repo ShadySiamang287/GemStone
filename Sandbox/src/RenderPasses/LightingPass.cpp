@@ -62,6 +62,13 @@ LightingPass::LightingPass(ConstantBuffer<FrameData>* frameDataBuffer, Structure
     depthRange.RegisterSpace = 0;
     depthRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
 
+    D3D12_DESCRIPTOR_RANGE shadowRange{};
+    shadowRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+    shadowRange.NumDescriptors = 1;
+    shadowRange.BaseShaderRegister = 4;
+    shadowRange.RegisterSpace = 0;
+    shadowRange.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND;
+
     D3D12_ROOT_PARAMETER lightingParam;
     lightingParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
     lightingParam.DescriptorTable.NumDescriptorRanges = 1;
@@ -83,12 +90,18 @@ LightingPass::LightingPass(ConstantBuffer<FrameData>* frameDataBuffer, Structure
     depthParam.DescriptorTable.NumDescriptorRanges = 1;
     depthParam.DescriptorTable.pDescriptorRanges = &depthRange;
     depthParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
+    D3D12_ROOT_PARAMETER shadowParam{};
+    shadowParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+    shadowParam.DescriptorTable.NumDescriptorRanges = 1;
+    shadowParam.DescriptorTable.pDescriptorRanges = &shadowRange;
+    shadowParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
     lightingRootDesc.parameters.push_back(frameDataParameter);
     lightingRootDesc.parameters.push_back(albedoParam);
     lightingRootDesc.parameters.push_back(normalParam);
     lightingRootDesc.parameters.push_back(depthParam);
     lightingRootDesc.parameters.push_back(lightingParam);
+    lightingRootDesc.parameters.push_back(shadowParam);
     lightingRootDesc.samplers.push_back(linearWrap);
 
     mRootSig = ResourceFactory::CreateRootSignature(lightingRootDesc);
@@ -98,7 +111,7 @@ LightingPass::LightingPass(ConstantBuffer<FrameData>* frameDataBuffer, Structure
     lightingDesc.rootSignature = mRootSig;
     lightingDesc.vertexShader = { "Shaders/FullscreenVS.dxil" };
     lightingDesc.pixelShader = { "Shaders/LightingPS.dxil" };
-    lightingDesc.renderTargetFormats = { DXGI_FORMAT_R16G16B16A16_FLOAT,DXGI_FORMAT_R16G16B16A16_FLOAT };
+    lightingDesc.renderTargetFormats = { DXGI_FORMAT_R16G16B16A16_FLOAT };
     lightingDesc.depthTest = false;
     lightingDesc.depthWrite = false;
 
@@ -117,8 +130,7 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
     auto* normalTarget = manager.GetRenderTarget(L"Normal GBuffer");
     auto* depthTarget = manager.GetDepthTarget(L"Default Depth");
     auto* lightingTarget = manager.GetRenderTarget(L"Scene Color");
-    auto* bloomTarget = manager.GetRenderTarget(L"Bloom Ping");
-
+    auto* shadowMask = manager.GetRenderTarget(L"Shadow Ping");
 
     GraphicsCommands::BeginLabel(PIX_COLOR(255, 82, 124), "Lighting Pass");
     GraphicsCommands::TransitionRTV(
@@ -133,6 +145,13 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
     );
 
+    GraphicsCommands::TransitionRTV(
+        *shadowMask,
+        shadowMask->GetState(),
+        D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+    );
+
+
     GraphicsCommands::TransitionDSV(
         *depthTarget, depthTarget->GetState(),
         D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
@@ -144,20 +163,13 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
         D3D12_RESOURCE_STATE_RENDER_TARGET
     );
 
-    GraphicsCommands::TransitionRTV(
-        *bloomTarget,
-        bloomTarget->GetState(),
-        D3D12_RESOURCE_STATE_RENDER_TARGET
-    );
 
-
-    std::array<RenderTarget*, 2> lightingTargets = {
-        lightingTarget, bloomTarget
+    std::array<RenderTarget*, 1> lightingTargets = {
+        lightingTarget
     };
 
     GraphicsCommands::BindRenderTargets(lightingTargets);
     GraphicsCommands::ClearRenderTarget(*lightingTarget, mClearColour.data());
-    GraphicsCommands::ClearRenderTarget(*bloomTarget, mClearColour.data());
     GraphicsCommands::BindViewport(
         0.f,
         0.f,
@@ -178,6 +190,7 @@ void LightingPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::BindSRV(2, normalTarget->GetSRV());
     GraphicsCommands::BindSRV(3, depthTarget->GetSRV());
     GraphicsCommands::BindSRV(4, mLightBuffer->GetSRV());
+    GraphicsCommands::BindSRV(5, shadowMask->GetSRV());
     GraphicsCommands::Draw(3, 1, 0, 0);
     GraphicsCommands::EndLabel();
 }

@@ -1,8 +1,4 @@
 #include "common.hlsli"
-struct PointLight{
-    float4 positionRange;
-    float4 colourIntensity;
-};
 
 cbuffer FrameData : register(b0)
 {
@@ -10,20 +6,19 @@ cbuffer FrameData : register(b0)
     float4x4 ProjectionMatrix;
     float4x4 invViewMatrix;
     float4x4 invProjectionMatrix;
+    float3 ambientLight;
+    float ambientStrength;
     int lightCount;
-    float3 _padding;
+    float3 padding;
 }
 
 Texture2D albedo : register(t0);
 Texture2D normal : register(t1);
 Texture2D depth : register(t2);
 StructuredBuffer<PointLight> pointLights : register(t3);
-SamplerState LinearSampler : register(s0);
+Texture2D shadowMap : register(t4);
 
-struct FragOut {
-    float4 colour : SV_Target0;
-    float4 brightness : SV_Target1;
-};
+SamplerState LinearSampler : register(s0);
 
 float3 ReconstructWorldPosition(float2 texCoord, float depth) {
     float2 ndc = texCoord * 2.0 - 1.0;
@@ -59,35 +54,31 @@ float3 CalculatePointLight(PointLight light, float3 worldPos, float3 normal) {
     float attenuation = rangeFactor / max(distance * distance, 0.01f);
 
     return colour * intensity * NdotL * attenuation;
-
-    // float3 lightDir = normalize(light.positionRange.xyz - worldPos);
-    // float distance = length(light.positionRange.xyz - worldPos);
-    // float attenuation = 1.0f / (distance * distance);
-    // float NdotL = max(dot(normal, lightDir), 0.0f);
-    // return light.colourIntensity.rgb * NdotL * attenuation;
 }
 
-FragOut LightingPS(FullScreenVertOut input) {
-    FragOut output;
+float4 LightingPS(FullScreenVertOut input) : SV_Target0{
     float4 colour = albedo.Sample(LinearSampler, input.uv);
     float4 normalSample = normal.Sample(LinearSampler, input.uv);
     float depthSample = depth.Sample(LinearSampler, input.uv).r;
 
+    float3 worldPos = ReconstructWorldPosition(input.uv, depthSample);
+    float3 normal = normalize(normalSample.xyz * 2.0f - 1.0f);
+
+    float3 totalLighting = float3(0.f, 0.f, 0.f);
     for (int i = 0; i < lightCount; ++i) {
+        float shadowValue = 1.f;
+        
+        // it has a shadow
+        if (i < 4) {
+            shadowValue = shadowMap.Sample(LinearSampler, input.uv)[i];
+        }
         PointLight light = pointLights[i];
-        float3 worldPos = ReconstructWorldPosition(input.uv, depthSample);
-        float3 normal = normalize(normalSample.xyz * 2.0f - 1.0f);
         float3 lightContribution = CalculatePointLight(light, worldPos, normal);
-        colour.rgb += lightContribution;
+        totalLighting += lightContribution * shadowValue;
     }
 
+    float3 ambient = ambientLight * ambientStrength;
+    float4 output = float4(colour * (ambient + totalLighting), 1.f);
 
-    float brightness = dot(colour.rgb, float3(0.2126, 0.7152, 0.0722));
-    if (brightness > 1.0f) {
-        output.brightness = float4(colour.rgb, 1.0f);
-    } else {
-        output.brightness = float4(0.0f, 0.0f, 0.0f, 1.0f);
-    }
-    output.colour = colour;
     return output;
 }

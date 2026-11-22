@@ -19,9 +19,14 @@ namespace GEM{
     };
 
     // uhh i have no idea what needs to go in here );
+    #define MAX_ATMOS = 5
     struct HitPayload{
         float tHit;
         UINT instanceID;
+
+        std::array<float, 5> atmosphereTNear;
+        std::array<float, 5> atmosphereTFar;
+        UINT seenMask;
     };
 
     class RaytracingPipeline{

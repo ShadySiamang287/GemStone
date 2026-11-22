@@ -63,14 +63,28 @@ Renderer::Renderer(GraphicsContext& context, HWND window)
         DXGI_FORMAT_R16G16B16A16_FLOAT,
         width,
         height,
-        sceneClearColour
+        sceneClearColour,
+        0.5f
     );
     auto mBloomTarget2 = &mRenderTargetsPtr->CreateRenderTarget(
         L"Bloom Pong",
         DXGI_FORMAT_R16G16B16A16_FLOAT,
         width,
         height,
-        sceneClearColour
+        sceneClearColour,
+        0.5f
+    );
+    auto shadowMask = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Shadow Mask",
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        width,
+        height
+    );
+    auto shadowPing = &mRenderTargetsPtr->CreateRenderTarget(
+        L"Shadow Ping",
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        width,
+        height
     );
     
     mDepthTarget = &mRenderTargetsPtr->CreateDepthTarget(L"Default Depth", width, height);
@@ -121,6 +135,11 @@ void Renderer::Resize(UINT width, UINT height) {
 void Renderer::Render(Scene* scene) {
     GraphicsCommands::BeginFrame();
     mImGuiContext->BeginFrame();
+    if (updateLights) {
+        GraphicsCommands::CopyDataToBuffer(mPointLightBuffer->GetResource(), currentLights.data(), currentLights.size_bytes());
+        mFrameData.lightCount = currentLights.size();
+        updateLights = false;
+    }
     mFrameDataBuffer->Upload(mFrameData);
     mTLASPtr->Clear();
     auto models = scene->GetModels();
@@ -140,6 +159,6 @@ void Renderer::Render(Scene* scene) {
 }
 
 void Renderer::UpdateLights(std::span<PointLight> lights) {
-    GraphicsCommands::CopyDataToBuffer(mPointLightBuffer->GetResource(), lights.data(), lights.size_bytes());
-    mFrameData.lightCount = lights.size();
+    updateLights = true;
+    currentLights = lights;
 }

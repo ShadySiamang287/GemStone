@@ -41,6 +41,11 @@ namespace GEM{
 
         void UpdateLights(std::span<PointLight> lights);
 
+        void SetAmbientLight(const float& strength, const glm::vec3& light) {
+            mFrameData.ambientStrength = strength;
+            mFrameData.ambientLight = light;
+        }
+
     private:
         GraphicsContext& mContext;
         std::unique_ptr<RenderTargetManager> mRenderTargetsPtr;
@@ -56,5 +61,8 @@ namespace GEM{
         std::unique_ptr<ImGuiContext> mImGuiContext;
         std::unique_ptr<StructuredBuffer<PointLight, 1024>> mPointLightBuffer;
         std::unique_ptr<TLAS> mTLASPtr;
+
+        bool updateLights = false;
+        std::span<PointLight> currentLights;
     };
 }

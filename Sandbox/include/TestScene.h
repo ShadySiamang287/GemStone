@@ -16,5 +16,7 @@ private:
     std::vector<uint32_t> GeneratePlanetIndices();
 
     std::vector<GEM::PointLight> mLights;
+    glm::vec3 ambientLight = { 1.f, 1.f, 1.f };
+    float ambientStrength = { 0.5f };
     Camera mCamera;
 };

@@ -37,10 +37,12 @@ void RenderTargetManager::Resize(UINT width, UINT height) {
 
 	for (auto& [name, target] : mRenderTargets) {
 		target.mAllocation.Reset();
+		UINT targetWidth = target.scale * width;
+		UINT targetHeight = target.scale * height;
 		target.mDescription = CD3DX12_RESOURCE_DESC::Tex2D(
 			target.mDescription.Format,
-			width,
-			height,
+			targetWidth,
+			targetHeight,
 			1,
 			1,
 			1,
@@ -154,6 +156,19 @@ void RenderTargetManager::Resize(UINT width, UINT height) {
 			&srvDesc,
 			target.mSRVCPU
 		);
+
+		// D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+		// uavDesc.Format = target.mDescription.Format;
+		// uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+		// uavDesc.Texture2D.MipSlice = 0;
+
+		// mContext.mDevice->CreateUnorderedAccessView(
+		// 	target.GetResource(),
+		// 	nullptr,
+		// 	&uavDesc,
+		// 	target.mUAVCPU
+		// );
+
 	}
 
 	mWidth = width;
@@ -165,13 +180,13 @@ RenderTarget& RenderTargetManager::CreateRenderTarget(
 	DXGI_FORMAT format,
 	UINT width,
 	UINT height,
-	const std::array<float, 4>& clearColour
+	const std::array<float, 4>& clearColour, const float& scale
 ) {
 	if (name.empty()) {
 		throw std::invalid_argument("Render target name cannot be empty");
 	}
 
-	if (width == 0 || height == 0) {
+	if (width == 0 || height == 0 || scale == 0.f) {
 		throw std::invalid_argument("Render target dimensions must be non-zero");
 	}
 
@@ -183,11 +198,14 @@ RenderTarget& RenderTargetManager::CreateRenderTarget(
 	const UINT srvSlot = AcquireSRVSlot();
 	const UINT uavSlot = AcquireSRVSlot();
 
+	UINT finalWidth = scale * width;
+	UINT finalHeight = scale * height;
+
 	RenderTarget target;
 	target.mDescription = CD3DX12_RESOURCE_DESC::Tex2D(
 		format,
-		width,
-		height,
+		finalWidth,
+		finalHeight,
 		1,
 		1,
 		1,
@@ -258,6 +276,7 @@ RenderTarget& RenderTargetManager::CreateRenderTarget(
 	);
 
 	target.GetResource()->SetName(name.c_str());
+	target.scale = scale;
 	auto [iterator, inserted] = mRenderTargets.emplace(std::move(name), std::move(target));
 
 	if (!inserted) {
@@ -282,6 +301,7 @@ DepthTarget& RenderTargetManager::CreateDepthTarget(std::wstring name, UINT widt
 
 	const UINT dsvSlot = AcquireDSVSlot();
 	const UINT srvSlot = AcquireSRVSlot();
+	// const UINT uavSlot = AcquireSRVSlot();
 
 	DepthTarget target;
 	target.mDescription = CD3DX12_RESOURCE_DESC::Tex2D(
@@ -339,12 +359,27 @@ DepthTarget& RenderTargetManager::CreateDepthTarget(std::wstring name, UINT widt
 
 	target.mSRVCPU = GetSRVCPUHandle(srvSlot);
 	target.mSRVGPU = GetSRVGPUHandle(srvSlot);
+	// target.mUAVCPU = GetUAVCPUHandle(uavSlot);
+	// target.mUAVGPU = GetUAVGPUHandle(uavSlot);
 
 	mContext.mDevice->CreateShaderResourceView(
 		target.GetResource(),
 		&srvDesc,
 		target.mSRVCPU
 	);
+
+	// D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc{};
+	// uavDesc.Format = target.mDescription.Format;
+	// uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+	// uavDesc.Texture2D.MipSlice = 0;
+
+	// mContext.mDevice->CreateUnorderedAccessView(
+	// 	target.GetResource(),
+	// 	nullptr,
+	// 	&uavDesc,
+	// 	target.mUAVCPU
+	// );
+
 
 	auto [iterator, inserted] = mDepthTargets.emplace(std::move(name), std::move(target));
 

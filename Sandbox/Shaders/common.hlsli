@@ -1,3 +1,8 @@
+struct PointLight{
+    float4 positionRange;
+    float4 colourIntensity;
+};
+
 struct FullScreenVertOut {
     float4 position : SV_Position;
     float2 uv : TEXCOORD0;

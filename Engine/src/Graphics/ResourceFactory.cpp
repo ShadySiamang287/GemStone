@@ -519,7 +519,7 @@ std::unique_ptr<BLAS> ResourceFactory::CreateBLAS(const Primitive& primitive, st
 		sContextPtr->mAllocator->CreateResource(
 			&defaultDesc,
 			&scratchDesc,
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_COMMON,
 			nullptr,
 			blas->mScratchAllocation.GetAddressOf(),
 			IID_NULL,
@@ -636,7 +636,7 @@ std::unique_ptr<ProceduralBLAS> ResourceFactory::CreateProceduralBLAS(const D3D1
 		sContextPtr->mAllocator->CreateResource(
 			&defaultDesc,
 			&scratchDesc,
-			D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+			D3D12_RESOURCE_STATE_COMMON,
 			nullptr,
 			blas->mScratchAllocation.GetAddressOf(),
 			IID_NULL,

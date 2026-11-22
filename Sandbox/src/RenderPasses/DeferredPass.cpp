@@ -71,6 +71,10 @@ DeferredPass::DeferredPass(ConstantBuffer<FrameData>* frameDataBuffer, TLAS* tla
     desc.wireframe = false;
     mPipeline = ResourceFactory::CreateGraphicsPipeline(desc);
 
+    desc.wireframe = true;
+    desc.name = L"Wireframe Planet pipeline";
+    mWireframePipeline = ResourceFactory::CreateGraphicsPipeline(desc);
+
     D3D12_ROOT_PARAMETER param;
     param.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
     param.Descriptor.ShaderRegister = 0; // Binds to register(u0)
@@ -113,7 +117,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     for (int i = 0; i < totalPlanetCount; i++) {
         GraphicsCommands::RebuildBLAS(*mBLASes[i].get());
         glm::mat4x4 translation =  glm::translate({1.f}, mPlanetData[i].position);
-        tlasPtr->AddInstance(*mBLASes[i].get(), i, 0x01, glm::mat4x3(translation));
+        tlasPtr->AddInstance(*mBLASes[i].get(), i, 0, 0x01, glm::mat4x3(translation));
     }
 
     GraphicsCommands::RebuildTLAS(*tlasPtr);
@@ -146,7 +150,12 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
     GraphicsCommands::ClearRenderTarget(*normalTarget, mClearColour.data());
     GraphicsCommands::ClearDepthStencil(*depthTarget);
 
-    GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    if (wireframe) {
+        GraphicsCommands::BindGraphicsPipeline(*mWireframePipeline.get());
+    }
+    else {
+        GraphicsCommands::BindGraphicsPipeline(*mPipeline.get());
+    }
     GraphicsCommands::SetGraphicsConstantBufferView(0, mFrameDataBuffer->GetAddress());
 	GraphicsCommands::BindSRV(1, mPlanetDataBuffer->GetSRV());
 	GraphicsCommands::SetGraphicsConstantBufferView(2, mTesselationDataBuffer->GetAddress());
@@ -173,6 +182,7 @@ void DeferredPass::Render(RenderTargetManager& manager, std::span<Model> models)
 
 void DeferredPass::OnImGuiRender() {
     ImGui::Begin("Planet Pass");
+    ImGui::Checkbox("Wireframe", &wireframe);
     ImGui::SliderInt("Planet Count", &totalPlanetCount, 1, 5);
     ImGui::SeparatorText("Tesselation Settings");
 	ImGui::SliderFloat("Max Tesselation", &mTesselationData.maxTess, 1.f, 64.f);

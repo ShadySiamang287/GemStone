@@ -8,7 +8,6 @@
 /// @brief This just creates the console when the program is in debug mode
 void CreateDebugConsole()
 {
-#ifdef _DEBUG
     if (AllocConsole())
     {
         FILE* stream = nullptr;
@@ -35,7 +34,6 @@ void CreateDebugConsole()
         std::cerr.clear();
         std::cin.clear();
     }
-#endif
 }
 
 int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {

@@ -29,7 +29,8 @@ namespace GEM{
             DXGI_FORMAT format,
             UINT width,
             UINT height,
-            const std::array<float, 4>& clearColour = {0.0f, 0.0f, 0.0f, 1.0f}
+            const std::array<float, 4>& clearColour = {0.0f, 0.0f, 0.0f, 1.0f},
+            const float& scale = 1.f
         );
         DepthTarget& CreateDepthTarget(std::wstring name, UINT width, UINT height);
 
