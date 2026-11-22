@@ -6,6 +6,8 @@ namespace GEM{
     public:
         /// @brief Initialises the objects
         /// @param window The window being renderered too 
+        /// @param width The initial width of the window
+        /// @param height the initial height of the window
         GraphicsContext(HWND window, UINT width = 1280, UINT height = 720);
         /// @brief This is needed since the fence needs to empty before the objects are destroyed.
         ~GraphicsContext();
