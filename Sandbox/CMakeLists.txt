@@ -151,3 +151,17 @@ add_custom_command(TARGET Sandbox POST_BUILD
         $<TARGET_FILE:imgui>
         $<TARGET_FILE_DIR:Sandbox>
 )
+
+
+add_custom_target(StageAgility
+COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Sandbox>
+COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${AGILITY_CORE}" $<TARGET_FILE_DIR:Sandbox>
+VERBATIM)
+if(AGILITY_LAYERS)
+    add_custom_command(TARGET StageAgility POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${AGILITY_LAYERS}" $<TARGET_FILE_DIR:Sandbox>
+        VERBATIM)
+endif()
+add_dependencies(Sandbox StageAgility)

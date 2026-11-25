@@ -50,14 +50,4 @@ PRIVATE
     d3d12
     dxgi
     dxguid
-
-)
-
-add_custom_command(TARGET Engine POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:Engine>
-        $<TARGET_FILE_DIR:Sandbox>
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:WinPixEventRuntime>
-        $<TARGET_FILE_DIR:Sandbox>
 )

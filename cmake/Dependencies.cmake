@@ -71,3 +71,25 @@ target_sources(
 )
 
 target_link_libraries(imgui PUBLIC d3d12 dxgi d3dcompiler)
+
+FetchContent_Declare(
+    agility
+    URL           https://www.nuget.org/api/v2/package/Microsoft.Direct3D.D3D12/1.619.6
+    DOWNLOAD_NAME agility.zip
+)
+FetchContent_MakeAvailable(agility)
+
+file(GLOB_RECURSE _agility_all RELATIVE "${agility_SOURCE_DIR}" "${agility_SOURCE_DIR}/*")
+list(FILTER _agility_all INCLUDE REGEX "(^|/)x64(/|$)")
+set(AGILITY_CORE   "")
+set(AGILITY_LAYERS "")
+foreach(f ${_agility_all})
+    if(f MATCHES "(^|/)D3D12Core\\.dll$")
+        set(AGILITY_CORE   "${agility_SOURCE_DIR}/${f}")
+    elseif(f MATCHES "(^|/)d3d12SDKLayers\\.dll$")
+        set(AGILITY_LAYERS "${agility_SOURCE_DIR}/${f}")
+    endif()
+endforeach()
+if(NOT AGILITY_CORE)
+    message(FATAL_ERROR "Agility SDK: D3D12Core.dll (x64) not found in ${agility_SOURCE_DIR}")
+endif()
