@@ -18,15 +18,12 @@ PRIVATE
 target_precompile_headers(Engine PRIVATE ${Engine_SOURCE_DIR}/include/pch.h)
 
 target_sources(Engine PRIVATE
-    src/Core/Application.cpp
-    src/Core/Window.cpp
     src/Graphics/GraphicsContext.cpp
     src/Graphics/GraphicsCommands.cpp
     src/Graphics/GraphicsPipeline.cpp
     src/Graphics/ResourceFactory.cpp
     src/Renderer/RenderTargetManager.cpp
     src/Renderer/Renderer.cpp
-    src/Core/Input.cpp
     src/ImGui/ImGuiContext.cpp
     src/Graphics/DXR/AccelerationStructs.cpp
     src/Graphics/DXR/RaytracingPipeline.cpp

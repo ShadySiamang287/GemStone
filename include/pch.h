@@ -26,3 +26,5 @@
 #include <optional>
 #include <span>
 #include <functional>
+
+#include <cstdint>

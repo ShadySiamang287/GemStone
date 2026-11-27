@@ -1,54 +1,23 @@
 #pragma once
 
-#include "Core/Input.h"
-
 namespace GEM {
 /// @brief this class encapsulates the win32 window
 class Window{
 	public:
-		/// @brief This is used to initialise the window
-		/// @param instance The instance handle provided by windows
-		/// @param windowName The name of the window
-		Window(HINSTANCE instance, const std::wstring& windowName);
+		Window() = default;
 		
-
-		/// @brief This pools the windows event
-		/// @return If the program should continue executing
-		bool PollEvents();
-		/// @brief Used to resize the window
-		/// @param width the new width
-		/// @param height the new height
-		/// @return If the window actually got resized
-		bool ConsumeResize(UINT& width, UINT& height);
-
-		/// @brief Checks if the window is minimised
-		/// @return if the window is minimised 
-		bool IsMinimised() const {
-			return mIsMinimised;
-		}
-
 		/// @brief gets the handle to the window that was created
 		/// @return the handle
-		HWND GetHandle() const {
-			return mHandle;
-		}
+		#ifdef GEM_PLATFORM_WINDOWS
+		virtual HWND GetHandle() = 0;
+		#endif
 
-		UINT GetWidth() const {
+		uint16_t GetWidth() const {
 			return mWidth;
 		}
 
-		UINT GetHeight() const {
+		uint16_t GetHeight() const {
 			return mHeight;
-		}
-
-		/// @brief Gets the current keyboard and mouse state.
-		/// @return The input state owned by this window.
-		Input& GetInput() {
-			return mInput;
-		}
-
-		const Input& GetInput() const {
-			return mInput;
 		}
 
 		/// @brief checks if the window should close
@@ -56,20 +25,12 @@ class Window{
 		bool ShouldClose() const {
 			return mShouldClose;
 		}
-	private:
-		void RegisterWindowClass(HINSTANCE instance);
+	protected:
 
-		HWND mHandle = nullptr;
 		bool mShouldClose = false;
 		bool mResizePending = false;
 		bool mIsMinimised = false;
-		UINT mWidth = 1280;
-		UINT mHeight = 720;
-		Input mInput;
-
-		LRESULT HandleMessage(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-
-		static LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-		static inline wchar_t sClassName[] = L"GemStoneWindowClass";
+		uint16_t mWidth = 1280;
+		uint16_t mHeight = 720;
 	};
 }

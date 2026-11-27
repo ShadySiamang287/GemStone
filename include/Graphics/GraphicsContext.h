@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/Window.h"
+
 namespace GEM{
     /// @brief This class encapsulates the DirectX12 objects 
     class GEM_API GraphicsContext{
@@ -8,7 +10,7 @@ namespace GEM{
         /// @param window The window being renderered too 
         /// @param width The initial width of the window
         /// @param height the initial height of the window
-        GraphicsContext(HWND window, UINT width = 1280, UINT height = 720);
+        GraphicsContext(Window* window);
         /// @brief This is needed since the fence needs to empty before the objects are destroyed.
         ~GraphicsContext();
 

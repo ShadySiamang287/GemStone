@@ -37,15 +37,15 @@ const wchar_t* GetBreadcrumbOperationName(D3D12_AUTO_BREADCRUMB_OP operation)
     }
 }
 
-GraphicsContext::GraphicsContext(HWND window, UINT width, UINT height)
-    : mWidth(width), mHeight(height) {
+GraphicsContext::GraphicsContext(Window* window)
+    : mWidth(window->GetWidth()), mHeight(window->GetHeight()) {
 	CreateFactory();
 	CreateAdaptor();
 	CreateDevice();
 	CreateAllocator();
 	CreateCommandObjects();
 	CreateFence();
-	CreateSwapchain(window, mWidth, mHeight);
+	CreateSwapchain(window->GetHandle(), mWidth, mHeight);
 	CreateSRVHeap();
 
 	Microsoft::WRL::ComPtr<D3D12MA::Allocation> uploadAllocation;
